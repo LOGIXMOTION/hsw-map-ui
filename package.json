@@ -1,0 +1,17 @@
+{
+  "name": "hsw-map-ui",
+  "version": "1.0.0",
+  "description": "HSW Map UI Application",
+  "main": "index.js",
+  "scripts": {
+    "start": "serve -s .",
+    "build": "echo 'Add your build script here'"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4",
+    "util": "^0.12.5",
+    "fs": "^0.0.1-security",
+    "path": "^0.12.7",
+    "child_process": "^1.0.2"
+  }
+}

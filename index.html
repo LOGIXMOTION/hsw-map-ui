@@ -1,0 +1,190 @@
+<!DOCTYPE >
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HSW X-TRAK UI</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@latest/dist/leaflet.css"
+    />
+    <link rel="stylesheet" href="../dist/leaflet-geoman.css" />
+    <link rel="stylesheet" href="demo.css" />
+
+    <!-- Add this in the head section of index.html -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css"
+    />
+    <script src="/env.js"></script>
+    <script>
+      console.log('env.js loaded, API_BASE_URL:', window.API_BASE_URL);
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+  </head>
+
+  <body>
+    
+    <div id="notification" class="notification"></div>
+    <!-- <button id="timeTrackingButton">View Time Tracking</button> -->
+
+    <div id="timeTrackingPopup" style="display: none" class="popup">
+      <div class="popup-content">
+        <div class="popup-header">
+          <h2>Time Tracking</h2>
+          <!-- <button class="close-button" onclick="closeTimeTrackingPopup()">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path
+                d="M15 5L5 15M5 5L15 15"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button> -->
+        </div>
+        <div class="date-selector-container">
+          <div class="date-input-wrapper">
+            <svg class="calendar-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path
+                d="M6 5V3M14 5V3M5 9H15M5 7H15M5 7C4.44772 7 4 6.55228 4 6V4C4 3.44772 4.44772 3 5 3H15C15.5523 3 16 3.44772 16 4V6C16 6.55228 15.5523 7 15 7M5 7V14C5 14.5523 5.44772 15 6 15H14C14.5523 15 15 14.5523 15 14V7M10 11H10.01"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
+            </svg>
+            <input
+              type="text"
+              id="dateSelector"
+              class="date-input"
+              placeholder="Select date..."
+              readonly
+            />
+            <span id="loadingIndicator" style="display: none">Loading...</span>
+          </div>
+        </div>
+        <div class="table-container">
+          <table class="time-tracking-table" id="timeTrackingTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Session Start</th>
+                <th>Session Stop</th>
+                <th>Time Counter</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Table content will be dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="popup-footer">
+          <p class="info-text">
+            Time counter waits 10 minutes to stop a session after leaving all
+            blukiiHubs' range.
+          </p>
+        </div>
+      </div>
+    </div>
+    <script src="/env.js"></script>
+    <script src="./Managers/time-tracking-api.js"></script>
+    <script src="./Managers/time-tracking-ui.js"></script>
+
+    <!-- <button id="openRssiButton" class="rssi-button">Open RSSI Monitor</button> -->
+    <div id="rssiPopup-main" class="rssipopup" style="display: none;">
+      <div id="rssiPopup" class="rssi-popup">
+        <div class="rssi-header">
+          <h1 class="rssi-title">RSSI Monitor</h1>
+          <!-- <hr> -->
+          <!-- <button id="closeRssiButton" class="close-button">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              Close
+          </button> -->
+        </div>
+        <table id="rssiTable" class="rssi-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
+    <!-- <script src="./Managers/rssi-init.js"></script> -->
+    <script type="module" src="./Managers/rssi-monitor.js"></script>
+
+    <main id="sidepanel-main" style="display: none">
+      <button class="panel-toggle" id="panelToggle">›</button>
+
+      <div id="panelContainer" class="panel-container">
+        <div class="button-panel">
+          <div id="mainMenu">
+            <button id="manageAssetsBtn" class="menu-button add-delete-button">
+              Manage Assets
+            </button>
+            <div id="zoneButtonsContainer"></div>
+          </div>
+        </div>
+        <div class="content-panel">
+          <div id="assetsPanel" class="form-container">
+            <h3 id="manage-assets" class="form-title">Manage Assets</h3>
+
+            <div class="add-icon" id="addIcon"></div>
+
+            <div
+              id="addFormContainer"
+              class="add-form-container"
+              style="display: none"
+            >
+              <div class="form-group">
+                <label for="beaconMac">Beacon MAC:</label>
+                <input type="text" id="beaconMac" name="beaconMac" />
+              </div>
+
+              <div class="form-group">
+                <label for="assetName">Asset Name:</label>
+                <input type="text" id="assetName" name="assetName" />
+              </div>
+
+              <div class="form-group">
+                <label for="isHuman">Type:</label>
+                <label
+                  style="display: flex; flex-direction: row; gap: 12px"
+                  class="checkbox-row"
+                  for="isHuman"
+                >
+                  <span class="checkbox-label">Human</span>
+                  <input style="width: unset" type="checkbox" id="isHuman" />
+                </label>
+              </div>
+
+              <button id="saveAssetBtn" class="save-btn">Save</button>
+            </div>
+
+            <div class="search-container">
+              <span class="search-icon">🔍</span>
+              <input
+                type="text"
+                id="assetSearch"
+                class="search-input"
+                placeholder="Search assets..."
+              />
+            </div>
+
+            <div id="assetsList" class="asset-list"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <div class="wrapper">
+      <article>
+        <div class="map" id="demo"></div>
+      </article>
+    </div>
+    <script src="https://unpkg.com/leaflet@latest/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder@2.4.0/dist/Control.Geocoder.js"></script>
+    <script src="../dist/leaflet-geoman.js"></script>
+    <script type="module" src="demo.js"></script>
+    <script type="module" src="./Managers/SidePane.js"></script>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+version: '3.3'
+
+services:
+  frontend:
+    build:
+      context: .
+      args:
+        - API_BASE_URL=${API_BASE_URL}
+    container_name: asset-tracking-frontend-dev
+    restart: unless-stopped
+    environment:
+      - API_BASE_URL=${API_BASE_URL}
+    env_file:
+      - .env.dev
+    ports:
+      - "8500:3000"
+    networks:
+      - proxy-manager_default
+
+networks:
+  proxy-manager_default:
+    external: true
