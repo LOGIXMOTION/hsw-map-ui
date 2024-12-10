@@ -3,7 +3,7 @@ console.log('config.js loading, API_BASE_URL:', window.API_BASE_URL);
 
 const CONFIG = {
   api: {
-    baseURL: window.API_BASE_URL 
+    baseURL: window.API_BASE_URL || 'https://api-tracking.hard-softwerk.com', // Fall back hard coded link is only used for local development
   },
   map: {
     mapObj: null,
