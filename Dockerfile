@@ -13,8 +13,9 @@ WORKDIR /usr/share/nginx/html
 # Copy project files
 COPY . .
 
-# Make entrypoint script executable
-RUN chmod +x docker-entrypoint.sh
+# Move and make entrypoint script executable
+RUN mv docker-entrypoint.sh /docker-entrypoint.sh && \
+    chmod +x /docker-entrypoint.sh
 
 # Nginx config
 RUN echo 'server { \
