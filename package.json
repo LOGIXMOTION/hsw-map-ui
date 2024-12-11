@@ -8,10 +8,11 @@
     "build": "echo 'Add your build script here'"
   },
   "dependencies": {
-    "leaflet": "^1.9.4",
-    "util": "^0.12.5",
+    "child_process": "^1.0.2",
     "fs": "^0.0.1-security",
+    "leaflet": "^1.9.4",
     "path": "^0.12.7",
-    "child_process": "^1.0.2"
+    "serve": "^14.2.4",
+    "util": "^0.12.5"
   }
 }
