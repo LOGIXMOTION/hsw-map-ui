@@ -15,11 +15,13 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css"
     />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch@3.0.0/dist/geosearch.css" />
     <script src="/env.js"></script>
     <script>
       console.log('env.js loaded, API_BASE_URL:', window.API_BASE_URL);
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+    <script src="https://unpkg.com/leaflet-geosearch@latest/dist/bundle.min.js"></script>
   </head>
 
   <body>
@@ -186,5 +188,20 @@
     <script src="../dist/leaflet-geoman.js"></script>
     <script type="module" src="demo.js"></script>
     <script type="module" src="./Managers/SidePane.js"></script>
+
+
+
+  
+    <div class="searchs-container">
+      <input type="text" placeholder="Search location...">
+      <div class="spinner"></div>
+      <div class="searchs-results"></div>
+    </div>
+
+  <script>
+    
+  </script>
+
+
   </body>
 </html>

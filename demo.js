@@ -1,5 +1,7 @@
 /* eslint-disable */
 
+
+
 import APIManager from './Managers/APIManager.js';
 import DrawingManager from './Managers/DrawingManager.js';
 import ImageOverlayManager from './Managers/ImageOverlayManager.js';
@@ -95,6 +97,7 @@ class AssetTrackingApp {
     // this.imageManager.initializePlans('HSW', 'HSW', 1);
     sidePane.init();
     this.setupRSSIHeatmapControls();
+    
 
     // customBtns.forEach((btn) => {
     //   const anchors = btn.querySelectorAll('.leaflet-buttons-control-button');
@@ -103,7 +106,117 @@ class AssetTrackingApp {
     //   });
     // });
   }
+  // Add this to your AssetTrackingApp class
 
+initializeSearchBar() {
+  const searchContainer = document.querySelector('.searchs-container');
+  const searchInput = searchContainer.querySelector('input');
+  
+  searchInput.addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const searchQuery = searchInput.value.trim();
+      
+      if (searchQuery) {
+        try {
+          // Show loading state
+          searchInput.disabled = true;
+          searchInput.style.opacity = '0.7';
+          
+          // Use OpenStreetMap Nominatim API for geocoding
+          const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
+          const data = await response.json();
+          
+          if (data && data.length > 0) {
+            const location = data[0];
+            const lat = parseFloat(location.lat);
+            const lon = parseFloat(location.lon);
+            
+            // Create a marker at the location
+            if (this.searchMarker) {
+              this.map.removeLayer(this.searchMarker);
+            }
+            
+            this.searchMarker = L.marker([lat, lon]).addTo(this.map);
+            
+            // Add a popup with location name
+            this.searchMarker.bindPopup(location.display_name).openPopup();
+            
+            // Fly to the location with zoom level 16
+            this.map.flyTo([lat, lon], 16, {
+              duration: 1.5,
+              easeLinearity: 0.25
+            });
+            
+            // Highlight the area
+            if (this.searchHighlight) {
+              this.map.removeLayer(this.searchHighlight);
+            }
+            
+            this.searchHighlight = L.circle([lat, lon], {
+              color: '#3388ff',
+              fillColor: '#3388ff',
+              fillOpacity: 0.2,
+              radius: 200
+            }).addTo(this.map);
+          } else {
+            alert('Location not found. Please try a different search term.');
+          }
+        } catch (error) {
+          console.error('Search error:', error);
+          alert('An error occurred while searching. Please try again.');
+        } finally {
+          // Reset loading state
+          searchInput.disabled = false;
+          searchInput.style.opacity = '1';
+        }
+      }
+    }
+  });
+}
+
+// Add styles for the search functionality
+addSearchStyles() {
+  const styles = `
+    .search-container {
+      position: absolute;
+      top: 20px;
+      left: 60px;
+      z-index: 1000;
+      background: white;
+      padding: 8px;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .search-container input {
+      padding: 8px 32px 8px 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: 250px;
+      font-size: 14px;
+    }
+
+    .search-container input:focus {
+      outline: none;
+      border-color: #3388ff;
+    }
+
+    .search-container .search-icon {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #666;
+    }
+  `;
+
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
+  
+    
  
 
   addStyles(cssString) {
@@ -1289,7 +1402,30 @@ class AssetTrackingApp {
     // Global keyboard events
     document.addEventListener('keydown', this.handleKeyDown.bind(this));
     document.addEventListener('keyup', this.handleKeyUp.bind(this));
-  }
+
+    // document.addEventListener('DOMContentLoaded', () => {
+    //   // Check if the map is already initialized
+    //   let map;
+  
+    //   if (window.map) {
+    //       // Reuse the existing map instance
+    //       map = window.map;
+    //   } else {
+    //       // Initialize the map and store it globally to avoid reinitialization
+    //       map = L.map('demo').setView([51.505, -0.09], 13);
+  
+    //       // Add OpenStreetMap tiles
+    //       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    //           attribution: 'Map data © <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+    //       }).addTo(map);
+  
+    //       window.map = map; // Save the map instance globally
+    //   }
+  
+      // Reference the search bar in the searchs-container
+      
+  };
+  
 
   handleKeyDown(event) {
     if (event.key === 'Control') {
