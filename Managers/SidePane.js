@@ -9,8 +9,10 @@ class SidePane {
     this.assetsData = {};
     this.isSearching = false;
     this.searchQuery = '';
+    this.currentlySelectedZone = null; // New property for tracking selected zone
     this.IDTP = new BroadcastChannel('IDTP_CHANNEL');
     this.ICMP = new BroadcastChannel('ICMP');
+    
     // Bind methods to ensure correct context
     this.initializePanelToggle = this.initializePanelToggle.bind(this);
     this.initializeSearchListener = this.initializeSearchListener.bind(this);
@@ -22,6 +24,7 @@ class SidePane {
     this.showAssetOnMap = this.showAssetOnMap.bind(this);
     this.toggleAddForm = this.toggleAddForm.bind(this);
     this.handleZoneClick = this.handleZoneClick.bind(this);
+    this.updateZoneContent = this.updateZoneContent.bind(this);
   }
 
   init() {
@@ -129,6 +132,8 @@ class SidePane {
   }
 
   async showAssetsPanel() {
+    this.currentlySelectedZone = null; // Clear selected zone when showing assets panel
+    
     document.querySelectorAll('.menu-button').forEach((btn) => {
       btn.classList.remove('active');
     });
@@ -215,7 +220,7 @@ class SidePane {
       <div class="asset-zone">
           Zone: ${zone} ${hasZoneChanged ? '<span style="color: red;">(Changed)</span>' : ''}
       </div>
-      <div class="delete-icon" onclick="window.sidePaneInstance.deleteAsset('${asset.macAddress}')">🗑️</div>
+      <div class="delete-icon" onclick="event.stopPropagation(); window.sidePaneInstance.deleteAsset('${asset.macAddress}')">🗑️</div>
     `;
     return div;
   }
@@ -265,9 +270,7 @@ class SidePane {
   }
 
   async fetchZones() {
-    const zoneButtonsContainer = document.getElementById(
-      'zoneButtonsContainer'
-    );
+    const zoneButtonsContainer = document.getElementById('zoneButtonsContainer');
 
     try {
       const [zonesResponse, assetsResponse] = await Promise.all([
@@ -288,13 +291,17 @@ class SidePane {
         method: 'assetsData',
         data: assetsData,
       });
-      
+
+      // If currently viewing a zone, update its content
+      if (this.currentlySelectedZone) {
+        const zoneAssets = assetsData[this.currentlySelectedZone.name] || [];
+        this.updateZoneContent(this.currentlySelectedZone, zoneAssets);
+      }
 
       if (
         this.previousZonesData &&
         JSON.stringify(this.previousZonesData) === JSON.stringify(zonesData)
       ) {
-        console.log('No change in zone data');
         return;
       }
 
@@ -336,17 +343,7 @@ class SidePane {
     }
   }
 
-  handleZoneClick(zone, zoneAssets, button) {
-    document.querySelectorAll('.menu-button').forEach((btn) => {
-      btn.classList.remove('active');
-    });
-    button.classList.add('active');
-
-    const assetsPanel = document.getElementById('assetsPanel');
-    if (assetsPanel) {
-      assetsPanel.style.display = 'none';
-    }
-
+  updateZoneContent(zone, zoneAssets) {
     let zoneContent = document.getElementById('zoneContent');
     if (!zoneContent) {
       zoneContent = document.createElement('div');
@@ -386,6 +383,22 @@ class SidePane {
 
     content += '</div>';
     zoneContent.innerHTML = content;
+  }
+
+  handleZoneClick(zone, zoneAssets, button) {
+    this.currentlySelectedZone = zone; // Store the selected zone
+
+    document.querySelectorAll('.menu-button').forEach((btn) => {
+      btn.classList.remove('active');
+    });
+    button.classList.add('active');
+
+    const assetsPanel = document.getElementById('assetsPanel');
+    if (assetsPanel) {
+      assetsPanel.style.display = 'none';
+    }
+
+    this.updateZoneContent(zone, zoneAssets);
   }
 
   async saveAsset() {
