@@ -13,7 +13,7 @@ services:
     env_file:
       - .env.dev
     ports:
-      - "8500:3000"
+      - "8090:3000"
     networks:
       - proxy-manager_default
 

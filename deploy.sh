@@ -22,7 +22,7 @@ docker-compose up -d --build
 
 # Quick verification
 if docker ps | grep -q asset-tracking-frontend-dev; then
-    echo "Deployment successful! Application is running on port 8500"
+    echo "Deployment successful! Application is running on port 8090"
     echo "Checking environment variable..."
     docker exec asset-tracking-frontend-dev cat /usr/share/nginx/html/env.js
 else
