@@ -392,7 +392,6 @@ class AssetTrackingApp {
     styleSheet.textContent = styles;
     document.head.appendChild(styleSheet);
   }
-
   addStyles(cssString) {
     const styleSheet = document.createElement("style");
     styleSheet.textContent = cssString;
@@ -750,7 +749,8 @@ class AssetTrackingApp {
       maxNativeZoom: CONFIG.map.maxNativeZoom,
     }).addTo(map);
 
-    // More explicit geocoder setup
+    //OLD TEST
+    // // More explicit geocoder setup
     // const geocoder = L.Control.geocoder({
     //     defaultMarkGeocode: false, // Prevent default marker
     //     placeholder: "Search address...",
@@ -776,6 +776,66 @@ class AssetTrackingApp {
     //         .bindPopup(result.name)
     //         .openPopup();
     // });
+
+    // NEW TEST
+    // Geocoder Setup with Enhanced Configuration
+    //   const geocoder = L.Control.geocoder({
+    //     defaultMarkGeocode: false, // Prevent default marker
+    //     placeholder: "Search address...",
+    //     geocoder: L.Control.Geocoder.nominatim({
+    //       // Optional: Customize geocoding parameters
+    //       geocodingQueryParams: {
+    //         // Uncomment and modify as needed
+    //         // 'countrycodes': 'us', // Limit to specific country
+    //         // 'limit': 5, // Limit number of results
+    //       },
+    //     }),
+    //   }).addTo(map);
+
+    //   // Advanced Geocoding Event Listener
+    //   geocoder.on("markgeocode", function (e) {
+    //     const result = e.geocode;
+
+    //     // Clear previous markers if you want only one marker
+    //     map.eachLayer(function (layer) {
+    //       if (layer instanceof L.Marker) {
+    //         map.removeLayer(layer);
+    //       }
+    //     });
+
+    //     // Center and zoom to the found location with smooth animation
+    //     map.setView(result.center, 13, {
+    //       animate: true,
+    //       pan: {
+    //         duration: 1, // pan duration in seconds
+    //       },
+    //     });
+
+    //     // Create a more stylized marker
+    //     const marker = L.marker(result.center, {
+    //       icon: L.divIcon({
+    //         className: "custom-marker",
+    //         html: `
+    //             <div class="marker-pin"></div>
+    //             <div class="marker-label">${result.name}</div>
+    //         `,
+    //         iconSize: [30, 42],
+    //         iconAnchor: [15, 42],
+    //       }),
+    //     }).addTo(map);
+
+    //     // Optional: Add popup with more details
+    //     marker
+    //       .bindPopup(
+    //         `
+    //     <strong>Location:</strong> ${result.name}<br>
+    //     <small>Lat: ${result.center.lat.toFixed(
+    //       4
+    //     )}, Lng: ${result.center.lng.toFixed(4)}</small>
+    // `
+    //       )
+    //       .openPopup();
+    //   });
 
     return map;
   }
@@ -929,7 +989,8 @@ class AssetTrackingApp {
         onClick: () => {
           console.log("Edit Image button clicked!");
           this.imageManager.attachDragHandlers();
-          this.imageManager.disableEditButton();
+          // this.imageManager.disableEditButton();
+          this.imageManager.toggleEditMode();
           this.imageManager.enableSaveButton();
         },
       },
@@ -1086,9 +1147,14 @@ class AssetTrackingApp {
         position: "bottom", // bottom or top
         callback: (value) => {
           console.log("Opacity Slider value:", value);
-          if (this.imageManager.imageOverlay) {
+          if (this.imageManager.activeImageIndex !== null) {
             CONFIG.image.currentOpacity = value;
-            this.imageManager.imageOverlay.setOpacity(value);
+            const selectedImage =
+              this.imageManager.imageOverlays[
+                this.imageManager.activeImageIndex
+              ];
+            selectedImage.overlay.setOpacity(value);
+            selectedImage.opacity = value;
           }
         },
       },
@@ -1104,6 +1170,7 @@ class AssetTrackingApp {
         callback: (value) => {
           console.log("Rotation Slider value:", value);
           this.imageManager.rotationAngle = value;
+          // const selectedImage = this.imageManager.imageOverlays[this.imageManager.activeImageIndex];
           this.imageManager.updateImageRotation();
           // this.imageManager.applyCssRotation();
         },
@@ -1134,12 +1201,19 @@ class AssetTrackingApp {
         position: "bottom",
         callback: (value) => {
           console.log("Scale Slider value:", value);
-          if (this.imageManager.imageOverlay) {
+          if (this.imageManager.activeImageIndex !== null) {
+            const selectedImage =
+              this.imageManager.imageOverlays[
+                this.imageManager.activeImageIndex
+              ];
             CONFIG.image.currentScale = value;
-            // const aspectRatio =
-            //   CONFIG.image.dimensions.width / CONFIG.image.dimensions.height;
-            this.imageManager.calculateBounds(value);
-            // this.imageManager.imageOverlay.setBounds(newBounds);
+            this.imageManager.updateImageScale(value);
+
+            // Restore the rotation angle after scaling
+            // this.imageManager.rotationAngle = currentRotationAngle;
+            // this.imageManager.updateImageRotation();
+
+            selectedImage.scale = value;
           }
         },
       },
