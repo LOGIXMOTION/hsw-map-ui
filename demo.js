@@ -96,6 +96,7 @@ class AssetTrackingApp {
     this.setupRSSIHeatmapControls();
     this.initializeSearchBar();
     this.addSearchStyles();
+    this.showNotification({ message: "Welcome to Asset Tracking App!" });
 
     // customBtns.forEach((btn) => {
     //   const anchors = btn.querySelectorAll('.leaflet-buttons-control-button');
@@ -1208,6 +1209,7 @@ class AssetTrackingApp {
               ];
             CONFIG.image.currentScale = value;
             this.imageManager.updateImageScale(value);
+            this.showNotification({ type: "success", message: "Scale updated" });
 
             // Restore the rotation angle after scaling
             // this.imageManager.rotationAngle = currentRotationAngle;
@@ -1844,6 +1846,55 @@ class AssetTrackingApp {
       });
       ZoneBtn.textContent = "Show Zones";
     }
+  }
+
+  showNotification(options) {
+    const defaultOptions = {
+      type: "success",
+      message: "",
+      duration: 3000,
+      styles: {
+        position: "fixed",
+        top: "24px",
+        right: "504px",
+        background: "#4caf50",
+        color: "white",
+        padding: "16px 24px",
+        borderRadius: "8px",
+        display: "none",
+        fontSize: "14px",
+        fontWeight: "500",
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+        animation: "slideIn 0.3s ease",
+      },
+    };
+
+    const { type, message, duration, styles } = Object.assign(
+      defaultOptions,
+      options
+    );
+
+    const container = document.getElementById("notification-container");
+
+    if (!container) return;
+
+    const notification = document.createElement("div");
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+
+    Object.assign(notification.style, styles);
+
+    container.appendChild(notification);
+
+    setTimeout(() => {
+      notification.classList.add("fade-out");
+    }, duration);
+
+    notification.addEventListener("animationend", (e) => {
+      if (e.animationName === "fade-out") {
+        notification.remove();
+      }
+    });
   }
 }
 

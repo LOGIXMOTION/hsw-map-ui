@@ -88,11 +88,13 @@ class APIManager {
   }
 
   async deleteImageFromServer(id) {
-    this.request(`/plans/${id}`, {
+    const response = await this.request(`/plans/${id}`, {
       method: 'DELETE',
-    })
-      .then((res) => console.log(res))
-      .catch((e) => console.error(e));
+    });
+
+    return response;
+    // .then((res) => console.log(res))
+    //   .catch((e) => console.error(e));
   }
 
   async firstMarkerData() {

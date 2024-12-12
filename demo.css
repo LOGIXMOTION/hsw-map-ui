@@ -261,20 +261,6 @@ body {
   background: #f9f9f9;
   overflow-y: auto;
 }
-.notification {
-  position: fixed;
-  top: 24px;
-  right: 504px;
-  background: #4caf50;
-  color: white;
-  padding: 16px 24px;
-  border-radius: 8px;
-  display: none;
-  font-size: 14px;
-  font-weight: 500;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  animation: slideIn 0.3s ease;
-}
 @keyframes slideIn {
   from {
     transform: translateX(100px);
@@ -435,20 +421,6 @@ body {
 }
 .asset-type.device {
   background-color: #69b7ef;
-}
-.notification {
-  position: fixed;
-  top: 24px;
-  right: 504px;
-  background: #4caf50;
-  color: white;
-  padding: 16px 24px;
-  border-radius: 8px;
-  display: none;
-  font-size: 14px;
-  font-weight: 500;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  animation: slideIn 0.3s ease;
 }
 @keyframes slideIn {
   from {
@@ -1159,4 +1131,84 @@ hr {
 @keyframes spin {
   0% { transform: translateY(-50%) rotate(0deg); }
   100% { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* Notification Container Styles */
+#notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  max-width: 350px;
+  width: 100%;
+}
+
+/* Individual Notification Styles */
+.notification {
+  position: relative;
+  margin-bottom: 10px;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  opacity: 1;
+  transition: all 0.5s ease-in-out;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+/* Notification Type Styles */
+.notification-success {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.notification-error {
+  background-color: #F44336;
+  color: white;
+}
+
+.notification-warning {
+  background-color: #FF9800;
+  color: white;
+}
+
+.notification-info {
+  background-color: #2196F3;
+  color: white;
+}
+
+/* Close Button */
+.notification-close {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  font-size: 18px;
+}
+
+/* Animation for fading out */
+.notification-fade-out {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+/* Progress Bar */
+.notification-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background-color: rgba(255,255,255,0.5);
+  width: 100%;
+  transform-origin: left;
+  animation: progress-animation linear 1 forwards;
+}
+
+@keyframes progress-animation {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
 }

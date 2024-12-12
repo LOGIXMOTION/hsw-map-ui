@@ -1,6 +1,7 @@
 import CONFIG from "../config.js";
 import "../src/Leaflet.ImageOverlay.Rotated.js";
 import APIManager from "./APIManager.js";
+import NotificationManager from "./NotificationManager.js";
 
 // Image Overlay Manager
 class ImageOverlayManager {
@@ -26,6 +27,7 @@ class ImageOverlayManager {
     this.setupFileInput();
     // this.setupScaleSliderListener();
     this.apiManager = new APIManager();
+    this.notificationManager = new NotificationManager();
     this.centerMarkers = new Map();
     this.rotationState = {
       angle: 0,
@@ -150,17 +152,29 @@ class ImageOverlayManager {
   async deleteImage() {
     if (this.activeImageIndex === null) return;
 
-    // Remove from map
     const imageToDelete = this.imageOverlays[this.activeImageIndex];
-    this.map.removeLayer(imageToDelete.overlay);
 
     // If image was saved on server, delete from server
     if (imageToDelete.id) {
       const response = await this.apiManager.deleteImageFromServer(
         imageToDelete.id
       );
+      console.log(response);
+      if (response.message === "Plan deleted successfully") {
+        this.notificationManager.show({
+          type: "error",
+          message: "Image deleted successfully",
+        });
+      } else {
+        this.notificationManager.show({
+          type: "Error",
+          message: "Failed to delete image from server",
+        });
+      }
       // return response;
     }
+
+    this.map.removeLayer(imageToDelete.overlay);
 
     // Remove from array
     this.imageOverlays.splice(this.activeImageIndex, 1);
@@ -801,14 +815,26 @@ class ImageOverlayManager {
           body: formData,
           headers: {},
         });
+        this.notificationManager.show({
+          message: `Saved ${imageOverlay.file.name} successfully!`,
+          type: "success",
+        });
         savePromises.push(response);
         console.log(response);
+        imageOverlay.id = response.id;
       } else {
         console.log(`Updating image ${imageOverlay.id}`);
-        const response = await this.apiManager.request(`/plans/${imageOverlay.id}`, {
-          method: "PUT",
-          body: formData,
-          headers: {},
+        const response = await this.apiManager.request(
+          `/plans/${imageOverlay.id}`,
+          {
+            method: "PUT",
+            body: formData,
+            headers: {},
+          }
+        );
+        this.notificationManager.show({
+          message: `Updated ${imageOverlay.file.name} successfully!`,
+          type: "success",
         });
 
         savePromises.push(response);
