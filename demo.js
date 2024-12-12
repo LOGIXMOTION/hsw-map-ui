@@ -94,6 +94,8 @@ class AssetTrackingApp {
     // this.imageManager.initializePlans('HSW', 'HSW', 1);
     sidePane.init();
     this.setupRSSIHeatmapControls();
+    this.initializeSearchBar();
+    this.addSearchStyles();
 
     // customBtns.forEach((btn) => {
     //   const anchors = btn.querySelectorAll('.leaflet-buttons-control-button');
@@ -102,7 +104,294 @@ class AssetTrackingApp {
     //   });
     // });
   }
+  // Add this to your AssetTrackingApp class
 
+  // AssetTrackingApp.js search-related methods
+
+  initializeSearchBar() {
+    const searchContainer = document.querySelector(".searchs-container");
+    const searchInput = searchContainer.querySelector("input");
+    const spinner = searchContainer.querySelector(".spinner");
+    const resultsContainer = searchContainer.querySelector(".searchs-results");
+    let debounceTimer;
+
+    // Handle input changes for suggestions
+    searchInput.addEventListener("input", async (e) => {
+      const query = e.target.value.trim();
+
+      // Clear previous timer
+      clearTimeout(debounceTimer);
+
+      // Clear results if input is empty
+      if (!query) {
+        resultsContainer.innerHTML = "";
+        resultsContainer.style.display = "none";
+        return;
+      }
+
+      // Debounce the search to avoid too many API calls
+      debounceTimer = setTimeout(async () => {
+        try {
+          spinner.style.display = "block";
+
+          // Fetch suggestions from Nominatim
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+              query
+            )}&limit=5`
+          );
+          const data = await response.json();
+
+          // Display suggestions
+          resultsContainer.innerHTML = "";
+
+          if (data.length > 0) {
+            data.forEach((place) => {
+              const div = document.createElement("div");
+              div.className = "search-result-item";
+              div.innerHTML = `
+              <span class="place-name">${
+                place.display_name.split(",")[0]
+              }</span>
+              <span class="place-description">${place.display_name}</span>
+            `;
+
+              // Handle click on suggestion
+              div.addEventListener("click", () => {
+                searchInput.value = place.display_name;
+                resultsContainer.style.display = "none";
+                this.goToLocation(place);
+              });
+
+              resultsContainer.appendChild(div);
+            });
+            resultsContainer.style.display = "block";
+          } else {
+            resultsContainer.style.display = "none";
+          }
+        } catch (error) {
+          console.error("Search error:", error);
+        } finally {
+          spinner.style.display = "none";
+        }
+      }, 300); // Debounce delay of 300ms
+    });
+
+    // Handle Enter key press
+    searchInput.addEventListener("keypress", async (e) => {
+      if (e.key === "Enter" && searchInput.value.trim()) {
+        e.preventDefault();
+        resultsContainer.style.display = "none";
+
+        try {
+          spinner.style.display = "block";
+          searchInput.disabled = true;
+
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+              searchInput.value
+            )}`
+          );
+          const data = await response.json();
+
+          if (data && data.length > 0) {
+            this.goToLocation(data[0]);
+          } else {
+            alert("Location not found. Please try a different search term.");
+          }
+        } catch (error) {
+          console.error("Search error:", error);
+          alert("An error occurred while searching. Please try again.");
+        } finally {
+          spinner.style.display = "none";
+          searchInput.disabled = false;
+        }
+      }
+    });
+
+    // Close suggestions when clicking outside
+    document.addEventListener("click", (e) => {
+      if (!searchContainer.contains(e.target)) {
+        resultsContainer.style.display = "none";
+      }
+    });
+  }
+
+  // Helper method to handle location selection
+  goToLocation(location) {
+    const lat = parseFloat(location.lat);
+    const lon = parseFloat(location.lon);
+
+    // Remove existing marker if any
+    if (this.searchMarker) {
+      this.map.removeLayer(this.searchMarker);
+    }
+
+    // Add new marker
+    this.searchMarker = L.marker([lat, lon]).addTo(this.map);
+    this.searchMarker.bindPopup(location.display_name).openPopup();
+
+    // Fly to location
+    this.map.flyTo([lat, lon], 16, {
+      duration: 1.5,
+      easeLinearity: 0.25,
+    });
+
+    // Remove any existing highlight if it exists
+    if (this.searchHighlight) {
+      this.map.removeLayer(this.searchHighlight);
+      this.searchHighlight = null;
+    }
+  }
+
+  addSearchStyles() {
+    const styles = `
+    .searchs-container {
+      position: absolute;
+      top: 17px;
+      left: 80px;
+      z-index: 1000;
+      width: 300px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    .searchs-container input {
+      width: 100%;
+      padding: 12px 40px 12px 16px;
+      border: 2px solid #e1e1e1;
+      border-radius: 24px;
+      font-size: 14px;
+      background: white;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .searchs-container input:hover {
+      border-color: #d1d1d1;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .searchs-container input:focus {
+      outline: none;
+      border-color: #3388ff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    }
+
+    .searchs-container input::placeholder {
+      color: #999;
+      transition: color 0.2s ease;
+    }
+
+    .searchs-container input:focus::placeholder {
+      color: #bbb;
+    }
+
+    .spinner {
+      display: none;
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #3388ff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .searchs-results {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      background: white;
+      border-radius: 16px;
+      margin-top: 4px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+      max-height: 300px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #d1d1d1 #f5f5f5;
+    }
+
+    .searchs-results::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .searchs-results::-webkit-scrollbar-track {
+      background: #f5f5f5;
+      border-radius: 0 16px 16px 0;
+    }
+
+    .searchs-results::-webkit-scrollbar-thumb {
+      background-color: #d1d1d1;
+      border-radius: 4px;
+      border: 2px solid #f5f5f5;
+    }
+
+    .search-result-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: background-color 0.2s ease;
+    }
+
+    .search-result-item:first-child {
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+    }
+
+    .search-result-item:last-child {
+      border-bottom: none;
+      border-bottom-left-radius: 16px;
+      border-bottom-right-radius: 16px;
+    }
+
+    .search-result-item:hover {
+      background: #f8f9fa;
+    }
+
+    .search-result-item:active {
+      background: #f0f0f0;
+    }
+
+    .place-name {
+      font-weight: 500;
+      color: #2c3e50;
+      font-size: 14px;
+    }
+
+    .place-description {
+      font-size: 12px;
+      color: #7f8c8d;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.4;
+    }
+
+    @keyframes spin {
+      0% { transform: translateY(-50%) rotate(0deg); }
+      100% { transform: translateY(-50%) rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      .searchs-container {
+        width: calc(100% - 80px);
+        max-width: 300px;
+      }
+    }
+  `;
+
+    const styleSheet = document.createElement("style");
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+  }
   addStyles(cssString) {
     const styleSheet = document.createElement("style");
     styleSheet.textContent = cssString;
@@ -917,7 +1206,6 @@ class AssetTrackingApp {
               this.imageManager.imageOverlays[
                 this.imageManager.activeImageIndex
               ];
-
             CONFIG.image.currentScale = value;
             this.imageManager.updateImageScale(value);
 
@@ -1392,6 +1680,27 @@ class AssetTrackingApp {
     // Global keyboard events
     document.addEventListener("keydown", this.handleKeyDown.bind(this));
     document.addEventListener("keyup", this.handleKeyUp.bind(this));
+
+    // document.addEventListener('DOMContentLoaded', () => {
+    //   // Check if the map is already initialized
+    //   let map;
+
+    //   if (window.map) {
+    //       // Reuse the existing map instance
+    //       map = window.map;
+    //   } else {
+    //       // Initialize the map and store it globally to avoid reinitialization
+    //       map = L.map('demo').setView([51.505, -0.09], 13);
+
+    //       // Add OpenStreetMap tiles
+    //       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    //           attribution: 'Map data © <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+    //       }).addTo(map);
+
+    //       window.map = map; // Save the map instance globally
+    //   }
+
+    // Reference the search bar in the searchs-container
   }
 
   handleKeyDown(event) {
