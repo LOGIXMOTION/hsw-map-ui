@@ -15,20 +15,28 @@ class ImageOverlayManager {
     this.isCursorOverImage = false;
     this.isDraggingImage = false;
     this.isCtrlPressed = false;
+    this.isEditMode = false;
+    this.centerMarkers = new Map();
     this.imageFiles = [];
-    // this.isMarkerDragging = false;
     this.dragStartLatLng = null;
     this.currentCenter = config.image.midpoint;
     this.imageWidth = 0;
     this.imageHeight = 0;
     this.setupEventHandlers();
     this.setupFileInput();
+    // this.setupScaleSliderListener();
     this.apiManager = new APIManager();
+    this.centerMarkers = new Map();
     this.rotationState = {
       angle: 0,
       transform: new DOMMatrix(),
       lastUpdateTime: 0,
     };
+    // this.imagePoints = {
+    //   topLeft: L.latLng(0, 0),
+    //   topRight: L.latLng(0, 0),
+    //   bottomLeft: L.latLng(0, 0),
+    // };
     this.lastRotationAngle = 0;
     this.handleMouseDown = this.handleMouseDown.bind(this);
     this.handleMouseMove = this.handleMouseMove.bind(this);
@@ -68,6 +76,12 @@ class ImageOverlayManager {
           const topRight = L.latLng(plan.topRight.lat, plan.topRight.lng);
           const bottomLeft = L.latLng(plan.bottomLeft.lat, plan.bottomLeft.lng);
 
+          this.imagePoints = {
+            topLeft: topLeft,
+            topRight: topRight,
+            bottomLeft: bottomLeft,
+          };
+
           // Create image overlay
           const imageOverlay = {
             overlay: L.imageOverlay
@@ -82,6 +96,8 @@ class ImageOverlayManager {
               )
               .addTo(this.map),
             file: imageFile,
+            id: plan.id,
+            center: L.latLng(plan.center.lat, plan.center.lng),
             points: {
               topLeft: topLeft,
               topRight: topRight,
@@ -175,6 +191,9 @@ class ImageOverlayManager {
         const scale = this.config.image.initialScale;
         const aspectRatio = img.width / img.height;
 
+        CONFIG.image.currentScale = scale;
+        CONFIG.image.dimensions = { width: img.width, height: img.height };
+
         // Calculate offsets
         const latOffset = scale / 111.19275649904434;
         const lngOffset =
@@ -208,6 +227,7 @@ class ImageOverlayManager {
             topRight: topRight,
             bottomLeft: bottomLeft,
           },
+          center: center,
           rotationAngle: 0,
           opacity: CONFIG.image.currentOpacity,
           scale: CONFIG.image.initialScale,
@@ -224,6 +244,8 @@ class ImageOverlayManager {
         // Attach event handlers for this specific overlay
         this.attachOverlayHandlers(imageOverlay);
 
+        this.rotationAngle = 0;
+
         // Select the newly added image
         this.selectImage(this.imageOverlays.length - 1);
       };
@@ -233,21 +255,33 @@ class ImageOverlayManager {
   }
 
   selectImage(index) {
-    // Deselect previously active image
+    // Remove center marker from previously selected image
     if (this.activeImageIndex !== null) {
-      this.deselectImage(this.activeImageIndex);
+      const prevImage = this.imageOverlays[this.activeImageIndex];
+      const prevMarker = this.centerMarkers.get(prevImage.overlay._leaflet_id);
+      if (prevMarker) {
+        this.map.removeLayer(prevMarker);
+      }
+      prevImage.isSelected = false;
     }
 
-    // Select new image
     this.activeImageIndex = index;
     const selectedImage = this.imageOverlays[index];
     selectedImage.isSelected = true;
 
-    // Update UI for selected image
+    // Show center marker for selected image
+    const marker = this.centerMarkers.get(selectedImage.overlay._leaflet_id);
+    if (marker) {
+      marker.addTo(this.map);
+    }
+
+    // Update UI controls
     this.updateUIForSelectedImage(selectedImage);
 
-    // Attach specific handlers for the selected image
-    this.attachSpecificHandlers(selectedImage);
+    // Enable/disable drag handlers based on edit mode
+    if (this.isEditMode) {
+      this.attachDragHandlers();
+    }
   }
 
   deselectImage(index) {
@@ -263,28 +297,27 @@ class ImageOverlayManager {
   }
 
   updateUIForSelectedImage(imageOverlay) {
-    // Update rotation slider
+    // Update sliders with the selected image's values
     const rotationSlider = document.getElementById("rotationSlider");
+    const opacitySlider = document.getElementById("imageOpacitySlider");
+    const scaleSlider = document.getElementById("scaleSlider");
+
     if (rotationSlider) {
       rotationSlider.querySelector("input").value = imageOverlay.rotationAngle;
     }
-
-    // Update opacity slider
-    const opacitySlider = document.getElementById("imageOpacitySlider");
     if (opacitySlider) {
-      opacitySlider.querySelector("input").value = imageOverlay.opacity * 100;
+      opacitySlider.querySelector("input").value = imageOverlay.opacity;
     }
-
-    // Update scale slider
-    const scaleSlider = document.getElementById("scaleSlider");
     if (scaleSlider) {
       scaleSlider.querySelector("input").value = imageOverlay.scale;
     }
 
-    // Enable/disable buttons
-    this.enableEditButton();
-    this.enableSaveButton();
-    this.enableDeleteButton();
+    // Enable/disable sliders based on edit mode
+    if (this.isEditMode) {
+      this.enableSliders();
+    } else {
+      this.disableSliders();
+    }
   }
 
   resetUIControls() {
@@ -318,63 +351,97 @@ class ImageOverlayManager {
     this.map.off("mouseup", this.handleMouseUp);
   }
 
-  calculateBounds(scale, w, h) {
-    const width = w || CONFIG.image.dimensions.width;
-    const height = h || CONFIG.image.dimensions.height;
+  /**
+   * Update the scale of the selected image overlay, and reposition it around its center.
+   * This function is called when the user changes the scale slider.
+   * @param {number} scale The new scale value between 0 and 1.
+   * @description
+   * This function is responsible for updating the scale of the selected image overlay. It calculates the new points for the image overlay by taking into account the aspect ratio of the image and the new scale value. The new points are then used to reposition the image overlay around its center. Additionally, the function updates the scale and new points of the active image overlay.
+   */
+  updateImageScale(scale) {
+    if (this.activeImageIndex === null) return;
 
-    // Get current center point
-    let center = this.imageOverlays
-      ? this.calculateImageCenter()
-      : this.map.getCenter();
+    const selectedImage = this.imageOverlays[this.activeImageIndex];
+    const currentCenter = selectedImage.center;
 
-    // Calculate height in degrees latitude
-    CONFIG.image.dimensions = { width: width, height: height };
+    // Get current rotation angle (0 if no rotation)
+    const currentRotation = this.rotationAngle || 0;
+    console.log('Current rotation angle:', currentRotation);
+
+    // Calculate new points based on the scale and aspect ratio
+    const width = selectedImage.dimensions.width;
+    const height = selectedImage.dimensions.height;
     const aspectRatio = width / height;
 
     // Calculate offsets based on scale and aspect ratio
     const latOffset = scale / 111.19275649904434; // Convert scale to approximate degrees
     const lngOffset =
       (scale * aspectRatio) /
-      (111.19275649904434 * Math.cos((center.lat * Math.PI) / 180));
+      (111.19275649904434 * Math.cos((currentCenter.lat * Math.PI) / 180));
 
-    console.log("scale: ", scale);
-    console.log("width, height: ", width, height);
-    console.log("center: ", center);
-    console.log("Aspect ratio: ", aspectRatio);
-    console.log("latOffset, lngOffset: ", latOffset, lngOffset);
-    console.log(center.lat + latOffset / 2, center.lng - lngOffset / 2);
-
-    // Define three points for the image
-    const topLeft = L.latLng(
-      center.lat + latOffset / 2,
-      center.lng - lngOffset / 2
+    // Define new points around the center (without rotation)
+    const newTopLeft = L.latLng(
+      currentCenter.lat + latOffset / 2,
+      currentCenter.lng - lngOffset / 2
     );
-    const topRight = L.latLng(
-      center.lat + latOffset / 2,
-      center.lng + lngOffset / 2
+    const newTopRight = L.latLng(
+      currentCenter.lat + latOffset / 2,
+      currentCenter.lng + lngOffset / 2
     );
-    const bottomLeft = L.latLng(
-      center.lat - latOffset / 2,
-      center.lng - lngOffset / 2
+    const newBottomLeft = L.latLng(
+      currentCenter.lat - latOffset / 2,
+      currentCenter.lng - lngOffset / 2
     );
 
-    this.imageOverlays.reposition(topLeft, topRight, bottomLeft);
+    // If there's a rotation, rotate the new points around the center
+    if (currentRotation !== 0) {
+      const rotatedTopLeft = this.rotatePoint(
+        newTopLeft,
+        currentCenter,
+        currentRotation
+      );
+      const rotatedTopRight = this.rotatePoint(
+        newTopRight,
+        currentCenter,
+        currentRotation
+      );
+      const rotatedBottomLeft = this.rotatePoint(
+        newBottomLeft,
+        currentCenter,
+        currentRotation
+      );
 
-    // Store new points for next rotation
-    this.imagePoints = {
-      topLeft: topLeft,
-      topRight: topRight,
-      bottomLeft: bottomLeft,
-    };
+      // Reposition the image with rotated points
+      selectedImage.overlay.reposition(
+        rotatedTopLeft,
+        rotatedTopRight,
+        rotatedBottomLeft
+      );
 
-    console.log("rotationAngle: ", this.rotationAngle);
-    console.log("lastRotationAngle: ", this.lastRotationAngle);
-    this.lastRotationAngle = 0;
-    console.log("lastRotationAngle after: ", this.lastRotationAngle);
-    this.updateImageRotation();
+      // Update stored points with rotated points
+      selectedImage.points = {
+        topLeft: rotatedTopLeft,
+        topRight: rotatedTopRight,
+        bottomLeft: rotatedBottomLeft,
+      };
+    } else {
+      // If no rotation, use the new points directly
+      selectedImage.overlay.reposition(newTopLeft, newTopRight, newBottomLeft);
 
-    // Create bounds maintaining aspect ratio
-    return L.latLngBounds(topLeft, topRight, bottomLeft);
+      // Update stored points
+      selectedImage.points = {
+        topLeft: newTopLeft,
+        topRight: newTopRight,
+        bottomLeft: newBottomLeft,
+      };
+    }
+
+    // Update scale-related properties
+    selectedImage.scale = scale;
+    CONFIG.image.currentScale = scale;
+
+    // Update center marker
+    this.updateCenterMarker(selectedImage);
   }
 
   setupEventHandlers() {
@@ -410,11 +477,12 @@ class ImageOverlayManager {
     const selectedImage = this.imageOverlays[this.activeImageIndex];
     selectedImage.dragStartLatLng = e.latlng;
     selectedImage.dragStartPoints = { ...selectedImage.points };
+    selectedImage.center = this.calculateImageCenter();
     this.map.dragging.disable();
   }
 
   handleMouseMove(e) {
-    if (this.activeImageIndex === null) return;
+    if (this.activeImageIndex === null || !this.isEditMode) return;
 
     const selectedImage = this.imageOverlays[this.activeImageIndex];
     if (!selectedImage.dragStartLatLng) return;
@@ -448,6 +516,12 @@ class ImageOverlayManager {
 
     // Update stored points
     selectedImage.points = newPoints;
+    console.log("selectedImage", selectedImage);
+    selectedImage.center = this.calculateImageCenter(
+      newPoints.topRight,
+      newPoints.bottomLeft
+    );
+    this.updateCenterMarker(selectedImage);
   }
 
   handleMouseUp() {
@@ -531,7 +605,7 @@ class ImageOverlayManager {
         const lngDiff = currentLatLng.lng - this.dragStartLatLng.lng;
 
         // Create new image points by translating the original points
-        const newImagePoints = {
+        const NewImagePoints = {
           topLeft: L.latLng(
             this.dragStartImagePoints.topLeft.lat + latDiff,
             this.dragStartImagePoints.topLeft.lng + lngDiff
@@ -548,20 +622,21 @@ class ImageOverlayManager {
 
         // Reposition the selected image
         selectedImage.overlay.reposition(
-          newImagePoints.topLeft,
-          newImagePoints.topRight,
-          newImagePoints.bottomLeft
+          NewImagePoints.topLeft,
+          NewImagePoints.topRight,
+          NewImagePoints.bottomLeft
         );
 
         // Update stored image points
-        selectedImage.points = newImagePoints;
+        selectedImage.points = NewImagePoints;
 
         // Update the midpoint in CONFIG
         const newCenter = this.calculateImageCenter(
-          newImagePoints.topRight,
-          newImagePoints.bottomLeft
+          NewImagePoints.topRight,
+          NewImagePoints.bottomLeft
         );
         CONFIG.image.midpoint = [newCenter.lat, newCenter.lng];
+        selectedImage.center = newCenter;
       }
     });
 
@@ -581,8 +656,10 @@ class ImageOverlayManager {
 
     // const bounds = this.imageOverlay.getBounds();
     // We use the top-right and bottom-left points to find center
-    const topRight = tr || this.imagePoints.topRight;
-    const bottomLeft = bl || this.imagePoints.bottomLeft;
+    const topRight =
+      tr || this.imageOverlays[this.activeImageIndex].points.topRight;
+    const bottomLeft =
+      bl || this.imageOverlays[this.activeImageIndex].points.bottomLeft;
 
     // console.log('topRight', topRight, 'bottomLeft', bottomLeft);
 
@@ -610,118 +687,135 @@ class ImageOverlayManager {
   }
 
   updateImageRotation() {
-    if (!this.imageOverlays || !this.imagePoints) return;
+    if (this.activeImageIndex === null) return;
+    console.log("imageOverlays: ", this.imageOverlays);
+    const selectedImage = this.imageOverlays[this.activeImageIndex];
+    const center = selectedImage.center;
+    if (this.rotationAngle !== this.lastRotationAngle) {
+      const deltaAngle = this.rotationAngle - this.lastRotationAngle;
 
-    const center = this.calculateImageCenter();
-    const deltaAngle = this.rotationAngle - this.lastRotationAngle;
+      // Rotate each corner point
+      const rotatedTopLeft = this.rotatePoint(
+        selectedImage.points.topLeft,
+        selectedImage.center,
+        deltaAngle
+      );
+      const rotatedTopRight = this.rotatePoint(
+        selectedImage.points.topRight,
+        selectedImage.center,
+        deltaAngle
+      );
+      const rotatedBottomLeft = this.rotatePoint(
+        selectedImage.points.bottomLeft,
+        selectedImage.center,
+        deltaAngle
+      );
 
-    // Rotate each corner point
-    const rotatedTopLeft = this.rotatePoint(
-      this.imagePoints.topLeft,
-      center,
-      deltaAngle
-    );
-    const rotatedTopRight = this.rotatePoint(
-      this.imagePoints.topRight,
-      center,
-      deltaAngle
-    );
-    const rotatedBottomLeft = this.rotatePoint(
-      this.imagePoints.bottomLeft,
-      center,
-      deltaAngle
-    );
+      console.log(
+        "TopLeft, TopRight, BottomLeft",
+        rotatedTopLeft,
+        rotatedTopRight,
+        rotatedBottomLeft
+      );
 
-    console.log(
-      "TopLeft, TopRight, BottomLeft",
-      rotatedTopLeft,
-      rotatedTopRight,
-      rotatedBottomLeft
-    );
+      selectedImage.overlay.reposition(
+        rotatedTopLeft,
+        rotatedTopRight,
+        rotatedBottomLeft
+      );
 
-    // Add some markers to show the points
-    // const markerTopLeft = L.marker(rotatedTopLeft).addTo(this.map);
-    // const markerTopRight = L.marker(rotatedTopRight).addTo(this.map);
-    // const markerBottomLeft = L.marker(rotatedBottomLeft).addTo(this.map);
-    // Update the image overlay using the reposition method from L.ImageOverlay.Rotated
-    this.imageOverlays.reposition(
-      rotatedTopLeft,
-      rotatedTopRight,
-      rotatedBottomLeft
-    );
+      // Store new points for next rotation
+      this.imagePoints = {
+        topLeft: rotatedTopLeft,
+        topRight: rotatedTopRight,
+        bottomLeft: rotatedBottomLeft,
+      };
 
-    // Store new points for next rotation
-    this.imagePoints = {
-      topLeft: rotatedTopLeft,
-      topRight: rotatedTopRight,
-      bottomLeft: rotatedBottomLeft,
-    };
+      selectedImage.points = {
+        topLeft: rotatedTopLeft,
+        topRight: rotatedTopRight,
+        bottomLeft: rotatedBottomLeft,
+      };
 
-    this.lastRotationAngle = this.rotationAngle;
-    CONFIG.image.rotationAngle = this.rotationAngle;
+      selectedImage.rotationAngle = this.rotationAngle;
+      this.lastRotationAngle = this.rotationAngle;
+      CONFIG.image.rotationAngle = this.rotationAngle;
 
-    console.log(
-      "Image Overlay Details:",
-      JSON.stringify(
-        {
-          topLeft: this.imagePoints.topLeft,
-          topRight: this.imagePoints.topRight,
-          bottomLeft: this.imagePoints.bottomLeft,
-          rotation: this.rotationAngle,
-          center: center,
-          opacity: CONFIG.image.currentOpacity,
-          scale: CONFIG.image.currentScale,
-          dimensions: CONFIG.image.dimensions,
-        },
-        null,
-        2
-      )
-    );
+      console.log(
+        "Image Overlay Details:",
+        JSON.stringify(
+          {
+            topLeft: this.imagePoints.topLeft,
+            topRight: this.imagePoints.topRight,
+            bottomLeft: this.imagePoints.bottomLeft,
+            rotation: this.rotationAngle,
+            center: center,
+            opacity: CONFIG.image.currentOpacity,
+            scale: CONFIG.image.currentScale,
+            dimensions: CONFIG.image.dimensions,
+          },
+          null,
+          2
+        )
+      );
+    }
   }
 
-  saveImageToServer() {
-    if (this.activeImageIndex === null) return;
+  async saveImageToServer() {
+    const savePromises = this.imageOverlays.map(async (imageOverlay) => {
+      const formData = new FormData();
+      formData.append(
+        "data",
+        JSON.stringify({
+          org: "HSW",
+          locale_info: "HSW",
+          floor: 1,
+          topLeft: imageOverlay.points.topLeft,
+          topRight: imageOverlay.points.topRight,
+          bottomLeft: imageOverlay.points.bottomLeft,
+          rotation: imageOverlay.rotationAngle,
+          opacity: imageOverlay.opacity,
+          scale: imageOverlay.scale,
+          dimensions: imageOverlay.dimensions,
+        })
+      );
 
-    const selectedImage = this.imageOverlays[this.activeImageIndex];
-    const formData = new FormData();
-
-    formData.append(
-      "data",
-      JSON.stringify({
-        org: "HSW",
-        locale_info: "HSW",
-        floor: 1,
-        topLeft: selectedImage.points.topLeft,
-        topRight: selectedImage.points.topRight,
-        bottomLeft: selectedImage.points.bottomLeft,
-        rotation: selectedImage.rotationAngle,
-        opacity: selectedImage.opacity,
-        scale: selectedImage.scale,
-        dimensions: selectedImage.dimensions,
-      })
-    );
-
-    // If image doesn't have an ID, it's a new upload
-    if (!selectedImage.overlay.options.id) {
-      formData.append("image", selectedImage.file);
-      this.apiManager
-        .request("/plans", {
+      if (!imageOverlay.overlay.options.id) {
+        formData.append("image", imageOverlay.file);
+        return this.apiManager.request("/plans", {
           method: "POST",
           body: formData,
           headers: {},
-        })
-        .then((res) => {
-          // Update the image with new ID from server
-          selectedImage.overlay.options.id = res.id;
-        })
-        .catch(console.error);
-    } else {
-      // Update existing image
-      this.apiManager.request(`/plans/${selectedImage.overlay.options.id}`, {
-        method: "PUT",
-        body: formData,
-        headers: {},
-      });
+        });
+      } else {
+        return this.apiManager.request(
+          `/plans/${imageOverlay.overlay.options.id}`,
+          {
+            method: "PUT",
+            body: formData,
+            headers: {},
+          }
+        );
+      }
+    });
+
+    try {
+      await Promise.all(savePromises);
+      // After successful save, disable edit mode and sliders
+      this.isEditMode = false;
+      this.disableSliders();
+      this.removeDragHandlers();
+
+      // Update edit button state
+      const editButton = document.getElementById("editImageButton");
+      if (editButton) {
+        editButton.style.backgroundColor = CONFIG.ui.colors.orange;
+        editButton.disabled = false;
+        editButton.style.cursor = "pointer";
+        editButton.style.opacity = "1";
+      }
+    } catch (error) {
+      console.error("Error saving images:", error);
     }
   }
 
@@ -777,6 +871,96 @@ class ImageOverlayManager {
       deleteButton.disabled = true;
       deleteButton.style.cursor = "not-allowed";
       deleteButton.style.opacity = "0.5";
+    }
+  }
+
+  enableSliders() {
+    const sliders = ["scaleSlider", "rotationSlider", "imageOpacitySlider"];
+    sliders.forEach((id) => {
+      const slider = document.getElementById(id);
+      if (slider) {
+        const input = slider.querySelector("input");
+        if (input) {
+          input.disabled = false;
+          slider.style.opacity = "1";
+          slider.style.cursor = "pointer";
+        }
+      }
+    });
+  }
+
+  disableSliders() {
+    const sliders = ["scaleSlider", "rotationSlider", "imageOpacitySlider"];
+    sliders.forEach((id) => {
+      const slider = document.getElementById(id);
+      if (slider) {
+        const input = slider.querySelector("input");
+        if (input) {
+          input.disabled = true;
+          slider.style.opacity = "0.5";
+          slider.style.cursor = "not-allowed";
+        }
+      }
+    });
+  }
+
+  toggleEditMode() {
+    this.isEditMode = !this.isEditMode;
+
+    if (this.isEditMode) {
+      this.enableSliders();
+      // Enable dragging for selected image
+      if (this.activeImageIndex !== null) {
+        this.attachDragHandlers();
+      }
+    } else {
+      this.disableSliders();
+      this.removeDragHandlers();
+    }
+
+    // Update button appearance
+    const editButton = document.getElementById("editImageButton");
+    if (editButton) {
+      editButton.style.backgroundColor = this.isEditMode
+        ? CONFIG.ui.colors.info
+        : "white";
+      editButton.style.color = this.isEditMode ? "white" : "black";
+      editButton.style.boxShadow = this.isEditMode
+        ? "5px 5px 10px inset #bbbbbb60, -5px -5px 10px inset #ffffff60, 5px 5px 10px #bbbbbb, -5px -5px 10px white"
+        : "5px 5px 10px #bbbbbb, -5px -5px 10px white";
+    }
+  }
+
+  // Create center marker for an image
+  createCenterMarker(imageOverlay) {
+    const center = this.calculateImageCenter(
+      imageOverlay.points.topRight,
+      imageOverlay.points.bottomLeft
+    );
+
+    const markerIcon = L.divIcon({
+      className: "image-center-marker",
+      html: `<img src="image_marker.svg" style="width: 24px; height: 24px;"/>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+    });
+
+    const marker = L.marker(center, { icon: markerIcon, interactive: false });
+    this.centerMarkers.set(imageOverlay.overlay._leaflet_id, marker);
+
+    if (imageOverlay.isSelected) {
+      marker.addTo(this.map);
+    }
+  }
+
+  updateCenterMarker(imageOverlay) {
+    const marker = this.centerMarkers.get(imageOverlay.overlay._leaflet_id);
+    if (marker) {
+      const center = this.calculateImageCenter(
+        imageOverlay.points.topRight,
+        imageOverlay.points.bottomLeft
+      );
+      marker.setLatLng(center);
     }
   }
 
