@@ -87,7 +87,7 @@ class APIManager {
     );
   }
 
-  deleteImageFromServer(id) {
+  async deleteImageFromServer(id) {
     this.request(`/plans/${id}`, {
       method: 'DELETE',
     })
