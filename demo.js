@@ -779,10 +779,10 @@ class AssetTrackingApp {
         onClick: () => {
           console.log("Save button clicked!");
 
-          if (this.imageManager.imageOverlay) {
+          if (this.imageManager.imageOverlays.length > 0) {
             this.uiManager.hideSliders();
             this.imageManager.saveImageToServer();
-            this.imageManager.enableEditButton();
+            this.imageManager.toggleEditMode();
             this.imageManager.disableSaveButton();
             this.imageManager.removeDragHandlers();
           }
