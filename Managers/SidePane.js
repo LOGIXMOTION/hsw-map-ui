@@ -92,8 +92,8 @@ class SidePane {
       toggleBtn.classList.toggle('collapsed');
       panel.classList.toggle('collapsed');
       toggleBtn.textContent = toggleBtn.classList.contains('collapsed')
-        ? '‹'
-        : '›';
+        ? '<'
+        : '>';
 
       if (notification.style.display === 'block') {
         notification.style.right = panel.classList.contains('collapsed')
@@ -433,9 +433,7 @@ class SidePane {
         throw new Error(`Failed to save asset: ${errorText}`);
       }
 
-      const notification = document.getElementById('notification');
-      notification.textContent = 'Asset Added!';
-      notification.style.display = 'block';
+      
 
       document.getElementById('beaconMac').value = '';
       document.getElementById('assetName').value = '';
@@ -443,9 +441,9 @@ class SidePane {
 
       document.getElementById('addFormContainer').style.display = 'none';
 
-      setTimeout(() => {
-        notification.style.display = 'none';
-      }, 3000);
+      // setTimeout(() => {
+      //   notification.style.display = 'none';
+      // }, 3000);
 
       await Promise.all([this.fetchZones(), this.fetchAndDisplayAllAssets()]);
     } catch (error) {
