@@ -45,6 +45,7 @@ class ImageOverlayManager {
 
   async initializePlans(org, locale_info, floor) {
     this.disableSaveButton();
+    this.disableDeleteButton();
     const Plans = await this.apiManager.getPlans(org, locale_info, floor);
     console.log("Plans:", Plans);
 
@@ -146,7 +147,7 @@ class ImageOverlayManager {
     });
   }
 
-  deleteImage() {
+  async deleteImage() {
     if (this.activeImageIndex === null) return;
 
     // Remove from map
@@ -155,11 +156,10 @@ class ImageOverlayManager {
 
     // If image was saved on server, delete from server
     if (imageToDelete.id) {
-      const response = this.apiManager.deleteImageFromServer(
-        imageToDelete.overlay.options.id
+      const response = await this.apiManager.deleteImageFromServer(
+        imageToDelete.id
       );
-      if (response) {
-      }
+      // return response;
     }
 
     // Remove from array
@@ -169,7 +169,8 @@ class ImageOverlayManager {
     this.activeImageIndex = null;
 
     // Reset UI
-    this.resetUIControls();
+    // this.resetUIControls();
+    this.disableSaveButton();
   }
 
   uploadButtonStatus(disable = true) {
@@ -928,11 +929,13 @@ class ImageOverlayManager {
 
     if (this.isEditMode) {
       this.enableSliders();
+      this.enableDeleteButton();
       // Enable dragging for selected image
       if (this.activeImageIndex !== null) {
         this.attachDragHandlers();
       }
     } else {
+      this.disableDeleteButton();
       this.disableSliders();
       this.removeDragHandlers();
     }
