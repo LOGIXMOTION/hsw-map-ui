@@ -44,6 +44,7 @@ class ImageOverlayManager {
   }
 
   async initializePlans(org, locale_info, floor) {
+    this.disableSaveButton();
     const Plans = await this.apiManager.getPlans(org, locale_info, floor);
     console.log("Plans:", Plans);
 
@@ -97,7 +98,7 @@ class ImageOverlayManager {
               .addTo(this.map),
             file: imageFile,
             id: plan.id,
-            center: L.latLng(plan.center.lat, plan.center.lng),
+            center: plan.center,
             points: {
               topLeft: topLeft,
               topRight: topRight,
@@ -112,6 +113,8 @@ class ImageOverlayManager {
 
           // Add unique identifier from server
           imageOverlay.overlay.options.id = plan.id;
+
+          this.rotationAngle = plan.rotation || 0;
 
           // Add to image overlays array
           this.imageOverlays.push(imageOverlay);
@@ -151,8 +154,12 @@ class ImageOverlayManager {
     this.map.removeLayer(imageToDelete.overlay);
 
     // If image was saved on server, delete from server
-    if (imageToDelete.overlay.options.id) {
-      this.apiManager.deleteImageFromServer(imageToDelete.overlay.options.id);
+    if (imageToDelete.id) {
+      const response = this.apiManager.deleteImageFromServer(
+        imageToDelete.overlay.options.id
+      );
+      if (response) {
+      }
     }
 
     // Remove from array
@@ -366,7 +373,7 @@ class ImageOverlayManager {
 
     // Get current rotation angle (0 if no rotation)
     const currentRotation = this.rotationAngle || 0;
-    console.log('Current rotation angle:', currentRotation);
+    console.log("Current rotation angle:", currentRotation);
 
     // Calculate new points based on the scale and aspect ratio
     const width = selectedImage.dimensions.width;
@@ -762,7 +769,11 @@ class ImageOverlayManager {
   }
 
   async saveImageToServer() {
-    const savePromises = this.imageOverlays.map(async (imageOverlay) => {
+    console.log("Saving images to server...");
+    const savePromises = [];
+    for (let index = 0; index < this.imageOverlays.length; index++) {
+      const imageOverlay = this.imageOverlays[index];
+      console.log(`Saving image ${index}...`);
       const formData = new FormData();
       formData.append(
         "data",
@@ -770,6 +781,7 @@ class ImageOverlayManager {
           org: "HSW",
           locale_info: "HSW",
           floor: 1,
+          center: imageOverlay.center,
           topLeft: imageOverlay.points.topLeft,
           topRight: imageOverlay.points.topRight,
           bottomLeft: imageOverlay.points.bottomLeft,
@@ -780,27 +792,34 @@ class ImageOverlayManager {
         })
       );
 
-      if (!imageOverlay.overlay.options.id) {
+      if (!imageOverlay.id) {
+        console.log("Saving new image");
         formData.append("image", imageOverlay.file);
-        return this.apiManager.request("/plans", {
+        const response = await this.apiManager.request("/plans", {
           method: "POST",
           body: formData,
           headers: {},
         });
+        savePromises.push(response);
+        console.log(response);
       } else {
-        return this.apiManager.request(
-          `/plans/${imageOverlay.overlay.options.id}`,
-          {
-            method: "PUT",
-            body: formData,
-            headers: {},
-          }
-        );
+        console.log(`Updating image ${imageOverlay.id}`);
+        const response = await this.apiManager.request(`/plans/${imageOverlay.id}`, {
+          method: "PUT",
+          body: formData,
+          headers: {},
+        });
+
+        savePromises.push(response);
+        console.log(response);
       }
-    });
+      // await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
 
     try {
+      console.log("Waiting for all images to be saved...");
       await Promise.all(savePromises);
+      console.log("All images saved successfully!");
       // After successful save, disable edit mode and sliders
       this.isEditMode = false;
       this.disableSliders();
@@ -809,7 +828,7 @@ class ImageOverlayManager {
       // Update edit button state
       const editButton = document.getElementById("editImageButton");
       if (editButton) {
-        editButton.style.backgroundColor = CONFIG.ui.colors.orange;
+        editButton.style.backgroundColor = CONFIG.ui.colors.white;
         editButton.disabled = false;
         editButton.style.cursor = "pointer";
         editButton.style.opacity = "1";
