@@ -29,7 +29,7 @@ const CONFIG = {
   },
   ui: {
     colors: {
-      primary: '#2196F3',
+      primary: '#FF6600',
       secondary: '#5F33F5',
       success: '#4CAF50',
       danger: '#f44336',
@@ -44,7 +44,7 @@ const CONFIG = {
     },
   },
   custom: {
-    Color: '#70ffae',
+    Color: '#FF6600',
     Opacity: 0.5,
     n: 0,
     offsetW: 25,

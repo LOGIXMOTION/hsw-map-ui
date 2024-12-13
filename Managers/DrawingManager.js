@@ -110,6 +110,14 @@ class DrawingManager {
             .on("popupopen", () => {
               // Add event listener specifically to the popup
               const popup = document.querySelector(".zone-popup");
+
+              popup.addEventListener("click", (event) => {
+                event.stopPropagation();
+                if (event.target.classList.contains("remove-btn")) {
+                  layer.closePopup();
+                  this.map.removeLayer(layer);
+                }
+              });
             });
           layer.openPopup();
 
@@ -354,6 +362,7 @@ class DrawingManager {
                 <input type="text" id="zoneName" name="zoneName" required>
             </div>
             <button type="submit" class="submit-btn">Save Zone</button>
+            <button type="button" class="remove-btn"">Remove</button>
         </form>
       `;
   }
@@ -484,7 +493,7 @@ class DrawingManager {
     }
   }
 
-  async deleteHubButton(id, e) {
+  async deleteHubButton(id, e, marker = null) {
     if (id) {
       // Prevent event bubbling
       e.stopPropagation();
@@ -498,6 +507,12 @@ class DrawingManager {
         const type = id.substring(0, 3) === "hub" ? "Hub" : "Beacon";
         try {
           const response = await this.deleteMarkerOnServer(id);
+          this.notificationManager.show({
+            message: `${type} "${id}" deleted from server.`,
+            type: "error",
+          });
+
+          marker.closePopup();
           console.log(`${type} "${id}" deleted successfully`);
           // Only show success message, no need for additional confirmation
           console.log("response", response);
@@ -795,13 +810,18 @@ class DrawingManager {
               // Create new click handler
               popup._clickHandler = async (event) => {
                 if (event.target.classList.contains("delete-marker")) {
-                  this.map.removeLayer(marker);
-                  const response = await this.deleteHubButton(marker.id, event);
+                  const response = await this.deleteHubButton(
+                    marker.id,
+                    event,
+                    marker
+                  );
                   marker.off("popupopen");
-                  this.notificationManager.show({
-                    message: "Hub deleted from server.",
-                    type: "error"
-                });
+                  marker.closePopup();
+                  this.map.removeLayer(marker);
+                  // this.notificationManager.show({
+                  //   message: "Hub deleted from server.",
+                  //   type: "error",
+                  // });
                 }
               };
 
@@ -928,7 +948,7 @@ class DrawingManager {
   }
 
   updateDrawingOptions() {
-    this.currentColor = CONFIG.custom.Color;
+    this.currentColor = CONFIG.custom.Color || "#FF6600";
     this.currentOpacity = CONFIG.custom.Opacity;
 
     const newPathOptions = {
@@ -941,19 +961,19 @@ class DrawingManager {
 
     this.map.pm.setGlobalOptions(newPathOptions);
 
-    if (this.map.pm.getMode) {
-      console.log("Draw mode:", this.map.pm.getMode());
-    } else {
-      console.error(
-        "getMode is not a function. Check your Leaflet.pm version."
-      );
-    }
+    // if (this.map.pm.getMode) {
+    //   console.log("Draw mode:", this.map.pm.getMode());
+    // } else {
+    //   console.error(
+    //     "getMode is not a function. Check your Leaflet.pm version."
+    //   );
+    // }
 
-    const currentMode = this.map.pm.getDrawMode();
-    if (currentMode) {
-      this.map.pm.disableDraw();
-      this.map.pm.enableDraw(currentMode, newPathOptions);
-    }
+    // const currentMode = this.map.pm.getDrawMode();
+    // if (currentMode) {
+    //   this.map.pm.disableDraw();
+    //   this.map.pm.enableDraw(currentMode, newPathOptions);
+    // }
   }
 
   undo() {

@@ -444,9 +444,10 @@ class AssetTrackingApp {
       document.querySelector("#deleteImageButton").style.display = "flex";
       document.querySelector("#editImageButton").style.display = "flex";
       document.querySelector("#ZoneBtn").style.display = "none";
-      const buttonContainer = (document.querySelector(
+      const buttonContainer = document.querySelector(
         "#buttonContainer"
-      ).style.display = "grid");
+      );
+      buttonContainer.style.display = "grid";
       buttonContainer.style.width = "350px";
 
       if (
@@ -499,9 +500,10 @@ class AssetTrackingApp {
       document.querySelector("#deleteImageButton").style.display = "none";
       document.querySelector("#editImageButton").style.display = "none";
       document.querySelector("#ZoneBtn").style.display = "flex";
-      const buttonContainer = (document.querySelector(
+      const buttonContainer = document.querySelector(
         "#buttonContainer"
-      ).style.display = "flex");
+      )
+      buttonContainer.style.display = "flex";
       buttonContainer.style.width = "175px";
     } else if (mode === "RSSI") {
       // this.rssiMonitor.initRssiPopup();
@@ -535,9 +537,10 @@ class AssetTrackingApp {
       document.querySelector("#deleteImageButton").style.display = "none";
       document.querySelector("#editImageButton").style.display = "none";
       document.querySelector("#ZoneBtn").style.display = "none";
-      const buttonContainer = (document.querySelector(
+      const buttonContainer = document.querySelector(
         "#buttonContainer"
-      ).style.display = "none");
+      );
+      buttonContainer.style.display = "none";
       buttonContainer.style.width = "350px";
     } else if (mode === "timetracking") {
       openTimeTrackingPopup();
@@ -570,9 +573,10 @@ class AssetTrackingApp {
         document.querySelector("#deleteImageButton").style.display = "none";
         document.querySelector("#editImageButton").style.display = "none";
         document.querySelector("#ZoneBtn").style.display = "none";
-        const buttonContainer = (document.querySelector(
+        const buttonContainer = document.querySelector(
           "#buttonContainer"
-        ).style.display = "none");
+        );
+        buttonContainer.style.display = "none";
         buttonContainer.style.width = "350px";
 
         if (
@@ -623,9 +627,10 @@ class AssetTrackingApp {
       document.querySelector("#deleteImageButton").style.display = "none";
       document.querySelector("#editImageButton").style.display = "none";
       document.querySelector("#ZoneBtn").style.display = "none";
-      const buttonContainer = (document.querySelector(
+      const buttonContainer = document.querySelector(
         "#buttonContainer"
-      ).style.display = "none");
+      )
+      buttonContainer.style.display = "none";
       buttonContainer.style.width = "350px";
 
       if (
@@ -894,10 +899,16 @@ class AssetTrackingApp {
             // Create new click handler
             popup._clickHandler = async (event) => {
               if (event.target.classList.contains("delete-marker")) {
+                marker.closePopup();
                 const response = await this.drawingManager.deleteHubButton(
                   marker.id,
-                  event
+                  event,
+                  marker
                 );
+                // this.notificationManager.show({
+                //   message: "Hub deleted from server.",
+                //   type: "error",
+                // });
                 marker.off("popupopen");
                 this.map.removeLayer(marker);
               }
@@ -1503,8 +1514,10 @@ class AssetTrackingApp {
                       const response =
                         await this.drawingManager.deleteHubButton(
                           marker.id,
-                          event
+                          event,
+                          marker
                         );
+                      marker.closePopup();
                       marker.off("popupopen");
                     }
                   };
