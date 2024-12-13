@@ -7,59 +7,12 @@ import UIManager from "./Managers/UIManager.js";
 import SidePane from "./Managers/SidePane.js";
 import RSSIHeatmapManager from "./Managers/HeatMapManager.js";
 import RssiMonitor from "./Managers/rssi-monitor.js";
+import NotificationManager from "./Managers/NotificationManager.js";
 import CONFIG from "./config.js";
-
-// Add this CSS to your existing styles
-const styles = `
-    #uiToggleButtons {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 1000;
-        display: flex;
-        gap: 10px;
-    }
-
-    .ui-toggle-btn {
-        padding: 10px 20px;
-        background-color: #fff;
-        border: 2px solid #2196F3;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: bold;
-        transition: all 0.3s ease;
-    }
-
-    .ui-toggle-btn.active {
-        background-color: #2196F3;
-        color: white;
-    }
-
-    #sidePanelContainer {
-        position: fixed;
-        right: 0;
-        top: 0;
-        width: 300px;
-        height: 100vh;
-        background: white;
-        box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-        z-index: 999;
-        overflow-y: auto;
-        padding: 20px;
-    }
-
-    .geoman-controls {
-        transition: opacity 0.3s ease;
-    }
-`;
 
 // Main Application
 class AssetTrackingApp {
   constructor() {
-    // Add the styles
-    this.addStyles(styles);
-
     // Create UI toggle buttons
     this.createUIToggleButtons();
 
@@ -77,6 +30,7 @@ class AssetTrackingApp {
     this.rssiHeatmapManager = new RSSIHeatmapManager(this.map);
     const sidePane = new SidePane();
     this.rssiMonitor = new RssiMonitor();
+    this.notificationManager = new NotificationManager();
 
     // Make the instance globally accessible for event handling
     window.sidePaneInstance = sidePane;
@@ -96,7 +50,6 @@ class AssetTrackingApp {
     this.setupRSSIHeatmapControls();
     this.initializeSearchBar();
     this.addSearchStyles();
-    this.showNotification({ message: "Welcome to Asset Tracking App!" });
 
     // customBtns.forEach((btn) => {
     //   const anchors = btn.querySelectorAll('.leaflet-buttons-control-button');
@@ -727,14 +680,45 @@ class AssetTrackingApp {
   async initializeMarkers() {
     try {
       await this.initializeZones();
+    } catch (error) {
+      console.error("Error initializing zones:", error);
+      this.notificationManager.show({
+        type: "error",
+        message: "Error initializing zones. Please try again.",
+        duration: 1000,
+      });
+    }
+
+    try {
       const response = await this.apiManager.getMarkers();
-      this.imageManager.initializePlans("HSW", "HSW", 1);
       if (response && response.hubs) {
         this.processMarkerData(response.hubs);
       }
     } catch (error) {
       console.error("Error initializing markers:", error);
+      this.notificationManager.show({
+        type: "error",
+        message: "Error initializing markers. Please try again.",
+        duration: 1200,
+      });
     }
+
+    try {
+      this.imageManager.initializePlans("HSW", "HSW", 1);
+    } catch (error) {
+      console.error("Error initializing image manager:", error);
+      this.notificationManager.show({
+        type: "error",
+        message: "Error initializing image manager. Please try again.",
+        duration: 1400,
+      });
+    }
+
+    this.notificationManager.show({
+      message: "Welcome!",
+      type: "info",
+      duration: 1600,
+    });
   }
 
   initializeMap() {
@@ -876,7 +860,7 @@ class AssetTrackingApp {
       marker.type = hub.type;
 
       // In processZoneData method
-      const formContent = this.createMarkerForm({
+      const formContent = this.drawingManager.createMarkerForm({
         latlng: {
           lat: hub.coordinates.lat,
           lng: hub.coordinates.lng,
@@ -914,10 +898,8 @@ class AssetTrackingApp {
                   marker.id,
                   event
                 );
-                if (response && response.message === "Hub deleted") {
-                  marker.off("popupopen");
-                  this.map.removeLayer(marker);
-                }
+                marker.off("popupopen");
+                this.map.removeLayer(marker);
               }
             };
 
@@ -1209,7 +1191,6 @@ class AssetTrackingApp {
               ];
             CONFIG.image.currentScale = value;
             this.imageManager.updateImageScale(value);
-            this.showNotification({ type: "success", message: "Scale updated" });
 
             // Restore the rotation angle after scaling
             // this.imageManager.rotationAngle = currentRotationAngle;
@@ -1240,99 +1221,6 @@ class AssetTrackingApp {
     });
   }
 
-  // Form creation function
-  createMarkerForm(markerInfo) {
-    const { latlng, type, data = {} } = markerInfo;
-
-    // Provide default values for all properties
-    const defaultData = {
-      ID: type === "RSSIhub" ? "hub" : "",
-      weight: "",
-      height: "",
-      orientationAngle: "",
-      tiltAngle: "",
-      zone: "",
-    };
-
-    // Merge provided data with default data
-    // const data = { ...defaultData, ...data };
-
-    // console.log('mergedData', mergedData);
-    // console.log("zones: ", CONFIG.zones.zoneNames);
-
-    return `
-      <form id="markerForm" class="marker-form" onsubmit="return false;">
-        <div class="form-group">
-          <label for="ID">${type === "RSSIhub" ? "Hub ID:" : "MAC ID:"}</label>
-          <input 
-            type="text" 
-            id="ID" 
-            value="${data.ID}" 
-            name="ID" 
-            pattern="${
-              type === "RSSIhub"
-                ? "^hub[0-9A-Fa-f]{8}$"
-                : "^([0-9A-Fa-f]{2}[:/-]){5}[0-9A-Fa-f]{2}$"
-            }" 
-            required>
-        </div>
-  
-        <div class="form-group">
-          <label for="mapCoordinates">Map Coordinates:</label>
-          <input type="text" id="mapCoordinates" name="mapCoordinates" value="${latlng.lat.toFixed(
-            15
-          )}, ${latlng.lng.toFixed(15)}" required>
-        </div>
-        
-        <div class="form-group">
-          <label for="weight">Weight:</label>
-          <input type="number" value="${
-            data.weight
-          }" id="weight" name="weight" min="0" max="5" step="0.1" required>
-        </div>
-        
-        <div class="form-group">
-          <label for="height">Height (meters):</label>
-          <input type="number" value="${
-            data.height
-          }" id="height" name="height" min="0" step="0.1" required>
-        </div>
-        
-        <div class="form-group">
-          <label for="orientationAngleFromNorth">Orientation Angle from North (degrees):</label>
-          <input type="number" value="${
-            data.orientationAngle
-          }" id="orientationAngleFromNorth" name="orientationAngleFromNorth" min="0" max="360" step="0.1" required>
-        </div>
-        
-        <div class="form-group">
-          <label for="tiltAngle">Tilt Angle (degrees):</label>
-          <input type="number" value="${
-            data.tiltAngle
-          }" id="tiltAngle" name="tiltAngle" min="-90" max="90" step="0.1" required>
-        </div>
-        
-        <div class="form-group">
-          <label for="zone">Zone:</label>
-          <select id="zone" name="zone" required>
-            <option value="">Select a zone</option>
-            ${CONFIG.zones.zoneNames
-              .map(
-                (zoneName) =>
-                  `<option value="${zoneName}" ${
-                    zoneName === data.zone ? "selected" : ""
-                  }>${zoneName}</option>`
-              )
-              .join("")}
-          </select>
-        </div>
-  
-        <button type="submit" class="submit-btn">Save</button>
-        <button type="button" class="delete-btn delete-marker">Delete</button>
-      </form>
-    `;
-  }
-
   dragHandling = function (marker) {
     // this.imageManager.setMarkerDraggingState(true);
     // Update coordinates in form if popup is open
@@ -1357,7 +1245,7 @@ class AssetTrackingApp {
         className: "blue-marker",
         color: CONFIG.blukiiTypes.colorTypes.RSSIhub,
         createPopupContent: (latlng) =>
-          this.createMarkerForm({
+          this.drawingManager.createMarkerForm({
             latlng,
             type: "RSSIhub",
             data: {
@@ -1376,7 +1264,7 @@ class AssetTrackingApp {
         className: "red-marker",
         color: CONFIG.blukiiTypes.colorTypes.Go1000,
         createPopupContent: (latlng) =>
-          this.createMarkerForm({
+          this.drawingManager.createMarkerForm({
             latlng,
             type: "Go1000",
             data: {
@@ -1395,7 +1283,7 @@ class AssetTrackingApp {
         className: "grey-marker",
         color: CONFIG.blukiiTypes.colorTypes.Box5200,
         createPopupContent: (latlng) =>
-          this.createMarkerForm({
+          this.drawingManager.createMarkerForm({
             latlng,
             type: "Box5200",
             data: {
@@ -1414,7 +1302,7 @@ class AssetTrackingApp {
         className: "green-marker",
         color: CONFIG.blukiiTypes.colorTypes.Box10800,
         createPopupContent: (latlng) =>
-          this.createMarkerForm({
+          this.drawingManager.createMarkerForm({
             latlng,
             type: "Box10800",
             data: {
@@ -1433,7 +1321,7 @@ class AssetTrackingApp {
         className: "yellow-marker",
         color: CONFIG.blukiiTypes.colorTypes.OutdoorMini5400,
         createPopupContent: (latlng) =>
-          this.createMarkerForm({
+          this.drawingManager.createMarkerForm({
             latlng,
             type: "OutdoorMini5400",
             data: {
@@ -1452,7 +1340,7 @@ class AssetTrackingApp {
         className: "purple-marker",
         color: CONFIG.blukiiTypes.colorTypes.Box230,
         createPopupContent: (latlng) =>
-          this.createMarkerForm({
+          this.drawingManager.createMarkerForm({
             latlng,
             type: "Box230",
             data: {
@@ -1471,7 +1359,7 @@ class AssetTrackingApp {
         className: "orange-marker",
         color: CONFIG.blukiiTypes.colorTypes.OutdoorExtreme4000,
         createPopupContent: (latlng) =>
-          this.createMarkerForm({
+          this.drawingManager.createMarkerForm({
             latlng,
             type: "OutdoorExtreme4000",
             data: {
@@ -1490,7 +1378,7 @@ class AssetTrackingApp {
         className: "teal-marker",
         color: CONFIG.blukiiTypes.colorTypes.GoMini,
         createPopupContent: (latlng) =>
-          this.createMarkerForm({
+          this.drawingManager.createMarkerForm({
             latlng,
             type: "GoMini",
             data: {
@@ -1509,7 +1397,7 @@ class AssetTrackingApp {
         className: "pink-marker",
         color: CONFIG.blukiiTypes.colorTypes.Go500,
         createPopupContent: (latlng) =>
-          this.createMarkerForm({
+          this.drawingManager.createMarkerForm({
             latlng,
             type: "Go500",
             data: {
@@ -1611,15 +1499,13 @@ class AssetTrackingApp {
                   // Create new click handler
                   popup._clickHandler = async (event) => {
                     if (event.target.classList.contains("delete-marker")) {
+                      this.map.removeLayer(marker);
                       const response =
                         await this.drawingManager.deleteHubButton(
                           marker.id,
                           event
                         );
-                      if (response && response.message === "Hub deleted") {
-                        marker.off("popupopen");
-                        this.map.removeLayer(marker);
-                      }
+                      marker.off("popupopen");
                     }
                   };
 
@@ -1848,54 +1734,54 @@ class AssetTrackingApp {
     }
   }
 
-  showNotification(options) {
-    const defaultOptions = {
-      type: "success",
-      message: "",
-      duration: 3000,
-      styles: {
-        position: "fixed",
-        top: "24px",
-        right: "504px",
-        background: "#4caf50",
-        color: "white",
-        padding: "16px 24px",
-        borderRadius: "8px",
-        display: "none",
-        fontSize: "14px",
-        fontWeight: "500",
-        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-        animation: "slideIn 0.3s ease",
-      },
-    };
+  // showNotification(options) {
+  //   const defaultOptions = {
+  //     type: "success",
+  //     message: "",
+  //     duration: 3000,
+  //     styles: {
+  //       position: "fixed",
+  //       top: "24px",
+  //       right: "504px",
+  //       background: "#4caf50",
+  //       color: "white",
+  //       padding: "16px 24px",
+  //       borderRadius: "8px",
+  //       display: "none",
+  //       fontSize: "14px",
+  //       fontWeight: "500",
+  //       boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+  //       animation: "slideIn 0.3s ease",
+  //     },
+  //   };
 
-    const { type, message, duration, styles } = Object.assign(
-      defaultOptions,
-      options
-    );
+  //   const { type, message, duration, styles } = Object.assign(
+  //     defaultOptions,
+  //     options
+  //   );
 
-    const container = document.getElementById("notification-container");
+  //   const container = document.getElementById("notification-container");
 
-    if (!container) return;
+  //   if (!container) return;
 
-    const notification = document.createElement("div");
-    notification.className = `notification ${type}`;
-    notification.textContent = message;
+  //   const notification = document.createElement("div");
+  //   notification.className = `notification ${type}`;
+  //   notification.textContent = message;
 
-    Object.assign(notification.style, styles);
+  //   Object.assign(notification.style, styles);
 
-    container.appendChild(notification);
+  //   container.appendChild(notification);
 
-    setTimeout(() => {
-      notification.classList.add("fade-out");
-    }, duration);
+  //   setTimeout(() => {
+  //     notification.classList.add("fade-out");
+  //   }, duration);
 
-    notification.addEventListener("animationend", (e) => {
-      if (e.animationName === "fade-out") {
-        notification.remove();
-      }
-    });
-  }
+  //   notification.addEventListener("animationend", (e) => {
+  //     if (e.animationName === "fade-out") {
+  //       notification.remove();
+  //     }
+  //   });
+  // }
 }
 
 // Initialize the application
