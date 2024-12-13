@@ -69,31 +69,4 @@ class NotificationManager {
 // Initialize Notification Manager
 const notificationManager = new NotificationManager('notification-container');
 
-// Example usage demonstration
-function showExamples() {
-    notificationManager.show({
-        message: 'Operation completed successfully!',
-        type: 'success'
-    });
-
-    setTimeout(() => {
-        notificationManager.show({
-            title: 'Warning',
-            message: 'Something might need your attention.',
-            type: 'warning'
-        });
-    }, 1000);
-
-    setTimeout(() => {
-        notificationManager.show({
-            title: 'Error',
-            message: 'An unexpected error occurred.',
-            type: 'error'
-        });
-    }, 2000);
-}
-
-// // Demonstrate notifications on page load
-// window.onload = showExamples;
-
 export default NotificationManager;
