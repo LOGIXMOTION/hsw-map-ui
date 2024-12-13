@@ -91,9 +91,9 @@ class SidePane {
     toggleBtn.addEventListener('click', () => {
       toggleBtn.classList.toggle('collapsed');
       panel.classList.toggle('collapsed');
-      toggleBtn.textContent = toggleBtn.classList.contains('collapsed')
-        ? '<'
-        : '>';
+      toggleBtn.innerHTML = toggleBtn.classList.contains('collapsed')
+        ? '<svg width="10" height="17" viewBox="0 0 46 77" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M40.6484 71.7856L7.57813 38.7144L40.6484 5.64404" stroke="white" stroke-width="10" stroke-linecap="round"/></svg>'
+        : `<svg width="10" height="17" viewBox="0 0 47 77" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5.94531 5.64404L39.0156 38.7153L5.94531 71.7856" stroke="white" stroke-width="10" stroke-linecap="round"/></svg>`.trim();
 
       if (notification.style.display === 'block') {
         notification.style.right = panel.classList.contains('collapsed')

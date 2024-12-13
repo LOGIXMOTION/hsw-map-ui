@@ -170,7 +170,7 @@ class UIManager {
 
     const colorPicker = document.createElement('input');
     colorPicker.type = 'color';
-    colorPicker.value = CONFIG.image.initialColor || '#FF6600';
+    colorPicker.value = CONFIG.ui.primary || '#FF6600';
     colorPicker.style.marginRight = '10px';
 
     const opacityInput = document.createElement('input');

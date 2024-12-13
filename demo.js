@@ -894,10 +894,16 @@ class AssetTrackingApp {
             // Create new click handler
             popup._clickHandler = async (event) => {
               if (event.target.classList.contains("delete-marker")) {
+                marker.closePopup();
                 const response = await this.drawingManager.deleteHubButton(
                   marker.id,
-                  event
+                  event,
+                  marker
                 );
+                // this.notificationManager.show({
+                //   message: "Hub deleted from server.",
+                //   type: "error",
+                // });
                 marker.off("popupopen");
                 this.map.removeLayer(marker);
               }
@@ -1503,8 +1509,10 @@ class AssetTrackingApp {
                       const response =
                         await this.drawingManager.deleteHubButton(
                           marker.id,
-                          event
+                          event,
+                          marker
                         );
+                      marker.closePopup();
                       marker.off("popupopen");
                     }
                   };
