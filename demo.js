@@ -444,9 +444,10 @@ class AssetTrackingApp {
       document.querySelector("#deleteImageButton").style.display = "flex";
       document.querySelector("#editImageButton").style.display = "flex";
       document.querySelector("#ZoneBtn").style.display = "none";
-      const buttonContainer = (document.querySelector(
+      const buttonContainer = document.querySelector(
         "#buttonContainer"
-      ).style.display = "grid");
+      );
+      buttonContainer.style.display = "grid";
       buttonContainer.style.width = "350px";
 
       if (
@@ -499,9 +500,10 @@ class AssetTrackingApp {
       document.querySelector("#deleteImageButton").style.display = "none";
       document.querySelector("#editImageButton").style.display = "none";
       document.querySelector("#ZoneBtn").style.display = "flex";
-      const buttonContainer = (document.querySelector(
+      const buttonContainer = document.querySelector(
         "#buttonContainer"
-      ).style.display = "flex");
+      )
+      buttonContainer.style.display = "flex";
       buttonContainer.style.width = "175px";
     } else if (mode === "RSSI") {
       // this.rssiMonitor.initRssiPopup();
@@ -535,9 +537,10 @@ class AssetTrackingApp {
       document.querySelector("#deleteImageButton").style.display = "none";
       document.querySelector("#editImageButton").style.display = "none";
       document.querySelector("#ZoneBtn").style.display = "none";
-      const buttonContainer = (document.querySelector(
+      const buttonContainer = document.querySelector(
         "#buttonContainer"
-      ).style.display = "none");
+      );
+      buttonContainer.style.display = "none";
       buttonContainer.style.width = "350px";
     } else if (mode === "timetracking") {
       openTimeTrackingPopup();
@@ -570,9 +573,10 @@ class AssetTrackingApp {
         document.querySelector("#deleteImageButton").style.display = "none";
         document.querySelector("#editImageButton").style.display = "none";
         document.querySelector("#ZoneBtn").style.display = "none";
-        const buttonContainer = (document.querySelector(
+        const buttonContainer = document.querySelector(
           "#buttonContainer"
-        ).style.display = "none");
+        );
+        buttonContainer.style.display = "none";
         buttonContainer.style.width = "350px";
 
         if (
@@ -623,9 +627,10 @@ class AssetTrackingApp {
       document.querySelector("#deleteImageButton").style.display = "none";
       document.querySelector("#editImageButton").style.display = "none";
       document.querySelector("#ZoneBtn").style.display = "none";
-      const buttonContainer = (document.querySelector(
+      const buttonContainer = document.querySelector(
         "#buttonContainer"
-      ).style.display = "none");
+      )
+      buttonContainer.style.display = "none";
       buttonContainer.style.width = "350px";
 
       if (
