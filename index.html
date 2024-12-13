@@ -15,17 +15,19 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css"
     />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch@3.0.0/dist/geosearch.css" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet-geosearch@3.0.0/dist/geosearch.css"
+    />
     <script src="/env.js"></script>
     <script>
-      console.log('env.js loaded, API_BASE_URL:', window.API_BASE_URL);
+      console.log("env.js loaded, API_BASE_URL:", window.API_BASE_URL);
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
     <script src="https://unpkg.com/leaflet-geosearch@latest/dist/bundle.min.js"></script>
   </head>
 
   <body>
-    
     <!-- Notification Container -->
     <div id="notification-container"></div>
 
@@ -46,7 +48,13 @@
         </div>
         <div class="date-selector-container">
           <div class="date-input-wrapper">
-            <svg class="calendar-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <svg
+              class="calendar-icon"
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="none"
+            >
               <path
                 d="M6 5V3M14 5V3M5 9H15M5 7H15M5 7C4.44772 7 4 6.55228 4 6V4C4 3.44772 4.44772 3 5 3H15C15.5523 3 16 3.44772 16 4V6C16 6.55228 15.5523 7 15 7M5 7V14C5 14.5523 5.44772 15 6 15H14C14.5523 15 15 14.5523 15 14V7M10 11H10.01"
                 stroke="currentColor"
@@ -93,7 +101,7 @@
     <script src="./Managers/time-tracking-ui.js"></script>
 
     <!-- <button id="openRssiButton" class="rssi-button">Open RSSI Monitor</button> -->
-    <div id="rssiPopup-main" class="rssipopup" style="display: none;">
+    <div id="rssiPopup-main" class="rssipopup" style="display: none">
       <div id="rssiPopup" class="rssi-popup">
         <div class="rssi-header">
           <h1 class="rssi-title">RSSI Monitor</h1>
@@ -164,7 +172,27 @@
             </div>
 
             <div class="search-container">
-              <span class="search-icon">🔍</span>
+              <span class="search-icon">
+                <svg
+                  fill="#000000"
+                  height="10px"
+                  width="10px"
+                  version="1.1"
+                  id="Capa_1"
+                  xmlns="http://www.w3.org/2000/svg"
+                  xmlns:xlink="http://www.w3.org/1999/xlink"
+                  viewBox="0 0 490.4 490.4"
+                  xml:space="preserve"
+                >
+                  <g>
+                    <path
+                      d="M484.1,454.796l-110.5-110.6c29.8-36.3,47.6-82.8,47.6-133.4c0-116.3-94.3-210.6-210.6-210.6S0,94.496,0,210.796
+		s94.3,210.6,210.6,210.6c50.8,0,97.4-18,133.8-48l110.5,110.5c12.9,11.8,25,4.2,29.2,0C492.5,475.596,492.5,463.096,484.1,454.796z
+		 M41.1,210.796c0-93.6,75.9-169.5,169.5-169.5s169.6,75.9,169.6,169.5s-75.9,169.5-169.5,169.5S41.1,304.396,41.1,210.796z"
+                    />
+                  </g>
+                </svg>
+              </span>
               <input
                 type="text"
                 id="assetSearch"
@@ -189,11 +217,8 @@
     <script type="module" src="demo.js"></script>
     <script type="module" src="./Managers/SidePane.js"></script>
 
-
-
-  
     <div class="searchs-container">
-      <input type="text" placeholder="Search location...">
+      <input type="text" placeholder="Search location..." />
       <div class="spinner"></div>
       <div class="searchs-results"></div>
     </div>
