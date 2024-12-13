@@ -110,6 +110,14 @@ class DrawingManager {
             .on("popupopen", () => {
               // Add event listener specifically to the popup
               const popup = document.querySelector(".zone-popup");
+
+              popup.addEventListener("click", (event) => {
+                event.stopPropagation();
+                if (event.target.classList.contains("remove-btn")) {
+                  layer.closePopup();
+                  this.map.removeLayer(layer);
+                }
+              });
             });
           layer.openPopup();
 
@@ -354,6 +362,7 @@ class DrawingManager {
                 <input type="text" id="zoneName" name="zoneName" required>
             </div>
             <button type="submit" class="submit-btn">Save Zone</button>
+            <button type="button" class="remove-btn"">Remove</button>
         </form>
       `;
   }
