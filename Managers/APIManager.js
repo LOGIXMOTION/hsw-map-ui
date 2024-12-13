@@ -53,16 +53,16 @@ class APIManager {
       console.log('Response status:', response.status);
       console.log('Response headers:', [...response.headers.entries()]);
 
-      const textResponse = await response.text();
-      console.log('Raw response:', textResponse);
+      // const textResponse = await response.text();
+      // console.log('Raw response:', textResponse);
 
-      let jsonResponse;
-      try {
-        jsonResponse = JSON.parse(textResponse);
-      } catch (e) {
-        console.log('Response was not JSON:', textResponse);
-        throw new Error('Invalid JSON response from server');
-      }
+      // let jsonResponse;
+      // try {
+      //   jsonResponse = JSON.parse(textResponse);
+      // } catch (e) {
+      //   console.log('Response was not JSON:', textResponse);
+      //   throw new Error('Invalid JSON response from server');
+      // }
 
       if (!response.ok) {
         throw new Error(
@@ -70,7 +70,7 @@ class APIManager {
         );
       }
 
-      return jsonResponse;
+      return response.json();
     } catch (error) {
       console.error('Error in API call:', error);
       console.error('Error details:', {
