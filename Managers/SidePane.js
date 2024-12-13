@@ -1,5 +1,5 @@
-import CONFIG from '../config.js';
-import APIManager from './APIManager.js';
+import CONFIG from "../config.js";
+import APIManager from "./APIManager.js";
 
 class SidePane {
   constructor() {
@@ -8,11 +8,11 @@ class SidePane {
     this.previousAssets = {};
     this.assetsData = {};
     this.isSearching = false;
-    this.searchQuery = '';
+    this.searchQuery = "";
     this.currentlySelectedZone = null; // New property for tracking selected zone
-    this.IDTP = new BroadcastChannel('IDTP_CHANNEL');
-    this.ICMP = new BroadcastChannel('ICMP');
-    
+    this.IDTP = new BroadcastChannel("IDTP_CHANNEL");
+    this.ICMP = new BroadcastChannel("ICMP");
+
     // Bind methods to ensure correct context
     this.initializePanelToggle = this.initializePanelToggle.bind(this);
     this.initializeSearchListener = this.initializeSearchListener.bind(this);
@@ -28,7 +28,7 @@ class SidePane {
   }
 
   init() {
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener("DOMContentLoaded", () => {
       this.initializePanelToggle();
       this.initializeSearchListener();
       this.showAssetsPanel();
@@ -43,39 +43,39 @@ class SidePane {
       }, 1000);
 
       // Ensure the form is hidden initially
-      const form = document.getElementById('addFormContainer');
+      const form = document.getElementById("addFormContainer");
       if (form) {
-        form.style.display = 'none';
+        form.style.display = "none";
 
         // Attach save event listener to form
-        const saveButton = form.querySelector('button');
+        const saveButton = form.querySelector("button");
         if (saveButton) {
-          saveButton.addEventListener('click', this.saveAsset);
+          saveButton.addEventListener("click", this.saveAsset);
         }
       }
 
-      const addIcon = document.getElementById('addIcon');
+      const addIcon = document.getElementById("addIcon");
       if (addIcon) {
-        addIcon.addEventListener('click', this.toggleAddForm);
+        addIcon.addEventListener("click", this.toggleAddForm);
       }
 
-      const manageAssetsBtn = document.getElementById('manageAssetsBtn');
+      const manageAssetsBtn = document.getElementById("manageAssetsBtn");
       if (manageAssetsBtn) {
-        manageAssetsBtn.addEventListener('click', this.showAssetsPanel);
+        manageAssetsBtn.addEventListener("click", this.showAssetsPanel);
       }
 
-      const saveButton = document.getElementById('saveAssetBtn');
+      const saveButton = document.getElementById("saveAssetBtn");
       if (saveButton) {
-        saveButton.addEventListener('click', this.saveAsset);
+        saveButton.addEventListener("click", this.saveAsset);
       }
     });
   }
 
   showAssetOnMap(zone, asset) {
     const decodedAsset = JSON.parse(window.atob(asset));
-    console.log('Showing asset on map:', zone, decodedAsset);
+    console.log("Showing asset on map:", zone, decodedAsset);
     this.ICMP.postMessage({
-      method: 'showAssetOnMap',
+      method: "showAssetOnMap",
       data: {
         zone: zone,
         asset: decodedAsset.assetName,
@@ -84,30 +84,30 @@ class SidePane {
   }
 
   initializePanelToggle() {
-    const toggleBtn = document.getElementById('panelToggle');
-    const panel = document.getElementById('panelContainer');
-    const notification = document.getElementById('notification');
+    const toggleBtn = document.getElementById("panelToggle");
+    const panel = document.getElementById("panelContainer");
+    const notification = document.getElementById("notification");
 
-    toggleBtn.addEventListener('click', () => {
-      toggleBtn.classList.toggle('collapsed');
-      panel.classList.toggle('collapsed');
-      toggleBtn.innerHTML = toggleBtn.classList.contains('collapsed')
+    toggleBtn.addEventListener("click", () => {
+      toggleBtn.classList.toggle("collapsed");
+      panel.classList.toggle("collapsed");
+      toggleBtn.innerHTML = toggleBtn.classList.contains("collapsed")
         ? '<svg width="10" height="17" viewBox="0 0 46 77" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M40.6484 71.7856L7.57813 38.7144L40.6484 5.64404" stroke="white" stroke-width="10" stroke-linecap="round"/></svg>'
         : `<svg width="10" height="17" viewBox="0 0 47 77" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5.94531 5.64404L39.0156 38.7153L5.94531 71.7856" stroke="white" stroke-width="10" stroke-linecap="round"/></svg>`.trim();
 
-      if (notification.style.display === 'block') {
-        notification.style.right = panel.classList.contains('collapsed')
-          ? '24px'
-          : '504px';
+      if (notification.style.display === "block") {
+        notification.style.right = panel.classList.contains("collapsed")
+          ? "24px"
+          : "504px";
       }
     });
   }
 
   initializeSearchListener() {
-    const searchInput = document.getElementById('assetSearch');
+    const searchInput = document.getElementById("assetSearch");
     let debounceTimeout;
 
-    searchInput.addEventListener('input', (e) => {
+    searchInput.addEventListener("input", (e) => {
       clearTimeout(debounceTimeout);
       this.searchQuery = e.target.value.trim();
 
@@ -124,44 +124,44 @@ class SidePane {
   }
 
   toggleAddForm() {
-    const form = document.getElementById('addFormContainer');
+    const form = document.getElementById("addFormContainer");
     if (!form) return;
 
     const currentDisplay = window.getComputedStyle(form).display;
-    form.style.display = currentDisplay === 'none' ? 'block' : 'none';
+    form.style.display = currentDisplay === "none" ? "block" : "none";
   }
 
   async showAssetsPanel() {
     this.currentlySelectedZone = null; // Clear selected zone when showing assets panel
-    
-    document.querySelectorAll('.menu-button').forEach((btn) => {
-      btn.classList.remove('active');
+
+    document.querySelectorAll(".menu-button").forEach((btn) => {
+      btn.classList.remove("active");
     });
-    document.querySelector('.add-delete-button').classList.add('active');
+    document.querySelector(".add-delete-button").classList.add("active");
 
-    const assetsPanel = document.getElementById('assetsPanel');
-    const zoneContent = document.getElementById('zoneContent');
+    const assetsPanel = document.getElementById("assetsPanel");
+    const zoneContent = document.getElementById("zoneContent");
 
-    if (assetsPanel) assetsPanel.style.display = 'block';
-    if (zoneContent) zoneContent.style.display = 'none';
+    if (assetsPanel) assetsPanel.style.display = "block";
+    if (zoneContent) zoneContent.style.display = "none";
 
     await this.fetchAndDisplayAllAssets();
   }
 
-  async fetchAndDisplayAllAssets(currentQuery = '') {
+  async fetchAndDisplayAllAssets(currentQuery = "") {
     if (this.isSearching && !currentQuery) return;
 
     try {
-      this.assetsData = await this.apiManager.request('/assets');
-      const assetsList = document.getElementById('assetsList');
-      assetsList.innerHTML = '';
+      this.assetsData = await this.apiManager.request("/assets");
+      const assetsList = document.getElementById("assetsList");
+      assetsList.innerHTML = "";
 
       let assetFound = false;
 
       Object.entries(this.assetsData).forEach(([zone, assetsInZone]) => {
         assetsInZone.forEach((asset) => {
-          const assetName = (asset.assetName || 'Unnamed Asset').toLowerCase();
-          const macAddress = (asset.macAddress || 'No MAC').toLowerCase();
+          const assetName = (asset.assetName || "Unnamed Asset").toLowerCase();
+          const macAddress = (asset.macAddress || "No MAC").toLowerCase();
           const isHuman = asset.humanFlag === 1;
           const searchTerm = currentQuery.toLowerCase();
 
@@ -197,44 +197,50 @@ class SidePane {
           : '<div class="no-assets">No assets found</div>';
       }
     } catch (error) {
-      console.error('Error fetching assets:', error);
-      const assetsList = document.getElementById('assetsList');
+      console.error("Error fetching assets:", error);
+      const assetsList = document.getElementById("assetsList");
       assetsList.innerHTML = `<div class="error-message">Failed to load assets. Error: ${error.message}</div>`;
     }
   }
 
   createAssetCard(asset, zone, hasZoneChanged) {
-    const div = document.createElement('div');
-    div.setAttribute('id', asset.macAddress);
+    const div = document.createElement("div");
+    div.setAttribute("id", asset.macAddress);
     div.setAttribute(
-      'onClick',
-      `window.sidePaneInstance.showAssetOnMap('${zone}', '${window.btoa(JSON.stringify(asset))}')`
+      "onClick",
+      `window.sidePaneInstance.showAssetOnMap('${zone}', '${window.btoa(
+        JSON.stringify(asset)
+      )}')`
     );
-    div.className = 'asset-card';
+    div.className = "asset-card";
     div.innerHTML = `
-      <div class="asset-name">${asset.assetName || 'Unnamed Asset'}</div>
-      <div class="asset-mac">${asset.macAddress || 'No MAC'}</div>
-      <div class="asset-type ${asset.isHuman ? 'human' : 'device'}">
-          ${asset.isHuman ? 'Human' : 'Device'}
+      <div class="asset-name">${asset.assetName || "Unnamed Asset"}</div>
+      <div class="asset-mac">${asset.macAddress || "No MAC"}</div>
+      <div class="asset-type ${asset.isHuman ? "human" : "device"}">
+          ${asset.isHuman ? "Human" : "Device"}
       </div>
       <div class="asset-zone">
-          Zone: ${zone} ${hasZoneChanged ? '<span style="color: red;">(Changed)</span>' : ''}
+          Zone: ${zone} ${
+      hasZoneChanged ? '<span style="color: red;">(Changed)</span>' : ""
+    }
       </div>
-      <div class="delete-icon" onclick="event.stopPropagation(); window.sidePaneInstance.deleteAsset('${asset.macAddress}')">🗑️</div>
+      <div class="delete-icon" onclick="event.stopPropagation(); window.sidePaneInstance.deleteAsset('${
+        asset.macAddress
+      }')">🗑️</div>
     `;
     return div;
   }
 
   async deleteAsset(macAddress) {
-    if (!confirm('Are you sure you want to delete this asset?')) {
+    if (!confirm("Are you sure you want to delete this asset?")) {
       return;
     }
 
     try {
-      const response = await fetch(CONFIG.api.baseURL + '/delete-assets', {
-        method: 'DELETE',
+      const response = await fetch(CONFIG.api.baseURL + "/delete-assets", {
+        method: "DELETE",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           macAddresses: [macAddress.trim()],
@@ -246,40 +252,42 @@ class SidePane {
         throw new Error(`Failed to delete asset: ${errorText}`);
       }
 
-      const notification = document.getElementById('notification');
-      notification.textContent = 'Asset Deleted Successfully!';
-      notification.style.display = 'block';
+      const notification = document.getElementById("notification");
+      notification.textContent = "Asset Deleted Successfully!";
+      notification.style.display = "block";
 
       setTimeout(() => {
-        notification.style.display = 'none';
+        notification.style.display = "none";
       }, 3000);
 
       await Promise.all([this.fetchZones(), this.fetchAndDisplayAllAssets()]);
     } catch (error) {
-      console.error('Error deleting asset:', error);
-      const notification = document.getElementById('notification');
+      console.error("Error deleting asset:", error);
+      const notification = document.getElementById("notification");
       notification.textContent = `Error: ${error.message}`;
-      notification.style.display = 'block';
-      notification.style.backgroundColor = '#ff4444';
+      notification.style.display = "block";
+      notification.style.backgroundColor = "#ff4444";
 
       setTimeout(() => {
-        notification.style.display = 'none';
-        notification.style.backgroundColor = '#4CAF50';
+        notification.style.display = "none";
+        notification.style.backgroundColor = "#4CAF50";
       }, 3000);
     }
   }
 
   async fetchZones() {
-    const zoneButtonsContainer = document.getElementById('zoneButtonsContainer');
+    const zoneButtonsContainer = document.getElementById(
+      "zoneButtonsContainer"
+    );
 
     try {
       const [zonesResponse, assetsResponse] = await Promise.all([
-        fetch(CONFIG.api.baseURL + '/zones'),
-        fetch(CONFIG.api.baseURL + '/assets'),
+        fetch(CONFIG.api.baseURL + "/zones"),
+        fetch(CONFIG.api.baseURL + "/assets"),
       ]);
 
       if (!zonesResponse.ok || !assetsResponse.ok) {
-        throw new Error('Network response was not ok');
+        throw new Error("Network response was not ok");
       }
 
       const [zonesData, assetsData] = await Promise.all([
@@ -288,15 +296,16 @@ class SidePane {
       ]);
 
       this.IDTP.postMessage({
-        method: 'assetsData',
+        method: "assetsData",
         data: assetsData,
       });
-
-      // If currently viewing a zone, update its content
-      if (this.currentlySelectedZone) {
-        const zoneAssets = assetsData[this.currentlySelectedZone.name] || [];
-        this.updateZoneContent(this.currentlySelectedZone, zoneAssets);
-      }
+      setTimeout(() => {
+        // If currently viewing a zone, update its content
+        if (this.currentlySelectedZone) {
+          const zoneAssets = assetsData[this.currentlySelectedZone.name] || [];
+          this.updateZoneContent(this.currentlySelectedZone, zoneAssets);
+        }
+      }, 1000);
 
       if (
         this.previousZonesData &&
@@ -306,7 +315,7 @@ class SidePane {
       }
 
       this.previousZonesData = zonesData;
-      zoneButtonsContainer.innerHTML = '';
+      zoneButtonsContainer.innerHTML = "";
 
       if (zonesData && zonesData.zones && Array.isArray(zonesData.zones)) {
         const zones = zonesData.zones;
@@ -321,19 +330,19 @@ class SidePane {
 
         zones.forEach((zone) => {
           const zoneAssets = assetsData[zone.name] || [];
-          const button = document.createElement('button');
-          button.className = 'menu-button';
+          const button = document.createElement("button");
+          button.className = "menu-button";
           const countText =
-            zoneAssets.length > 0 ? ` (${zoneAssets.length})` : '';
+            zoneAssets.length > 0 ? ` (${zoneAssets.length})` : "";
           button.textContent = `${zone.name}${countText}`;
           button.onclick = () => this.handleZoneClick(zone, zoneAssets, button);
           zoneButtonsContainer.appendChild(button);
         });
       } else {
-        throw new Error('Invalid data structure received from API');
+        throw new Error("Invalid data structure received from API");
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error("Error fetching data:", error);
       zoneButtonsContainer.innerHTML = `
         <div class="error-message">
             Failed to load zones. Please try refreshing the page.<br>
@@ -344,14 +353,14 @@ class SidePane {
   }
 
   updateZoneContent(zone, zoneAssets) {
-    let zoneContent = document.getElementById('zoneContent');
+    let zoneContent = document.getElementById("zoneContent");
     if (!zoneContent) {
-      zoneContent = document.createElement('div');
-      zoneContent.id = 'zoneContent';
-      document.querySelector('.content-panel').appendChild(zoneContent);
+      zoneContent = document.createElement("div");
+      zoneContent.id = "zoneContent";
+      document.querySelector(".content-panel").appendChild(zoneContent);
     }
-    zoneContent.className = 'form-container';
-    zoneContent.style.display = 'block';
+    zoneContent.className = "form-container";
+    zoneContent.style.display = "block";
 
     let content = `
       <h3 class="form-title">${zone.name}</h3>
@@ -366,48 +375,50 @@ class SidePane {
       `;
     } else {
       zoneAssets.forEach((asset) => {
-        const macAddress = asset.macAddress || 'No MAC';
-        const assetName = asset.assetName || 'Unnamed Asset';
+        const macAddress = asset.macAddress || "No MAC";
+        const assetName = asset.assetName || "Unnamed Asset";
         const isHuman = asset.humanFlag === 1;
         content += `
-          <div class="asset-card" onclick="window.sidePaneInstance.showAssetOnMap('${zone.name}', '${window.btoa(JSON.stringify(asset))}')">
+          <div class="asset-card" onclick="window.sidePaneInstance.showAssetOnMap('${
+            zone.name
+          }', '${window.btoa(JSON.stringify(asset))}')">
               <div class="asset-name">${assetName}</div>
               <div class="asset-mac">${macAddress}</div>
-              <div class="asset-type ${isHuman ? 'human' : 'device'}">
-                  ${isHuman ? 'Human' : 'Device'}
+              <div class="asset-type ${isHuman ? "human" : "device"}">
+                  ${isHuman ? "Human" : "Device"}
               </div>
           </div>
         `;
       });
     }
 
-    content += '</div>';
+    content += "</div>";
     zoneContent.innerHTML = content;
   }
 
   handleZoneClick(zone, zoneAssets, button) {
     this.currentlySelectedZone = zone; // Store the selected zone
 
-    document.querySelectorAll('.menu-button').forEach((btn) => {
-      btn.classList.remove('active');
+    document.querySelectorAll(".menu-button").forEach((btn) => {
+      btn.classList.remove("active");
     });
-    button.classList.add('active');
+    button.classList.add("active");
 
-    const assetsPanel = document.getElementById('assetsPanel');
+    const assetsPanel = document.getElementById("assetsPanel");
     if (assetsPanel) {
-      assetsPanel.style.display = 'none';
+      assetsPanel.style.display = "none";
     }
 
     this.updateZoneContent(zone, zoneAssets);
   }
 
   async saveAsset() {
-    const beaconMac = document.getElementById('beaconMac').value;
-    const assetName = document.getElementById('assetName').value;
-    const isHuman = document.getElementById('isHuman').checked;
+    const beaconMac = document.getElementById("beaconMac").value;
+    const assetName = document.getElementById("assetName").value;
+    const isHuman = document.getElementById("isHuman").checked;
 
     if (!beaconMac || !assetName) {
-      alert('Please fill in all required fields');
+      alert("Please fill in all required fields");
       return;
     }
 
@@ -420,10 +431,10 @@ class SidePane {
     ];
 
     try {
-      const response = await fetch(CONFIG.api.baseURL + '/new-assets', {
-        method: 'POST',
+      const response = await fetch(CONFIG.api.baseURL + "/new-assets", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(assetData),
       });
@@ -433,13 +444,11 @@ class SidePane {
         throw new Error(`Failed to save asset: ${errorText}`);
       }
 
-      
+      document.getElementById("beaconMac").value = "";
+      document.getElementById("assetName").value = "";
+      document.getElementById("isHuman").checked = false;
 
-      document.getElementById('beaconMac').value = '';
-      document.getElementById('assetName').value = '';
-      document.getElementById('isHuman').checked = false;
-
-      document.getElementById('addFormContainer').style.display = 'none';
+      document.getElementById("addFormContainer").style.display = "none";
 
       // setTimeout(() => {
       //   notification.style.display = 'none';
@@ -447,7 +456,7 @@ class SidePane {
 
       await Promise.all([this.fetchZones(), this.fetchAndDisplayAllAssets()]);
     } catch (error) {
-      console.error('Error saving asset:', error);
+      console.error("Error saving asset:", error);
       alert(`Failed to save asset. Please try again. Error: ${error.message}`);
     }
   }
