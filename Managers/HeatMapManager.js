@@ -117,20 +117,19 @@ const calculateHeatmapRadius = (rssi, beaconType) => {
   }
 };
 
-
-
 class RSSIHeatmapManager {
-  constructor(map) {
-    this.map = map;
-    this.heatmapLayer = null;
-    this.rssiPoints = [];
-    this.markers = [];
-    this.beaconType = 'GO_500';
-    this.heatmapRadius = 1
-    this.map.on('zoomend', () => {
-      this.updateHeatmap();
-    }); // Default beacon type
-  }
+    constructor(map) {
+        this.map = map;
+        this.heatmapLayer = null;
+        this.rssiPoints = [];
+        this.markers = [];
+        this.beaconType = 'GO_500';
+        this.heatmapRadius = 1;
+        this.map.on('zoomend', () => {
+            this.updateHeatmap();
+          });
+      }
+    
 
   // Color mapping function for RSSI values
   getRSSIColor(rssiValue) {
@@ -152,23 +151,24 @@ class RSSIHeatmapManager {
   }
 
   addRSSIPoint(latlng, rssiValue, beaconType = this.beaconType) {
+    // Calculate the radius based on RSSI value and beacon type
     const { radius } = calculateHeatmapRadius(rssiValue, beaconType);
 
-    // Skip adding point if radius is zero
-    if (radius === 0) {
-        console.log(`Point with RSSI value ${rssiValue} skipped due to zero radius`);
-        return;
-    }
-
+    // Construct the heatmap point
     const point = [
         latlng.lat,
         latlng.lng,
-        this.calculateHeatmapIntensity(rssiValue, radius),
+        radius === 0 ? 0 : this.calculateHeatmapIntensity(rssiValue, radius),
     ];
 
+    // Add the point to the list (even if intensity is zero)
     this.rssiPoints.push(point);
-    console.log(this.rssiPoints);
-    this.updateHeatmap(radius);
+    console.log("Updated RSSI Points:", this.rssiPoints);
+
+    // Update the heatmap only for valid radius
+    if (radius > 0) {
+        this.updateHeatmap(radius);
+    }
 
     return point;
 }
@@ -177,84 +177,114 @@ class RSSIHeatmapManager {
   // Create a custom marker to show RSSI point details
   createRSSIMarker(latlng, rssiValue, beaconType = this.beaconType) {
     const color = this.getRSSIColor(rssiValue);
-    
+
     // Calculate radius for display
     const { radius, debug } = calculateHeatmapRadius(rssiValue, beaconType);
 
     const customIcon = L.divIcon({
-      className: 'rssi-marker',
-      html: `
-        <div style="
-          width: 15px; 
-          height: 15px; 
-          border-radius: 50%; 
-          background-color: ${color};
-          border: 2px solid white;
-          box-shadow: 0 0 5px rgba(0,0,0,0.5);
-        "></div>
-      `,
-      iconSize: [15, 15],
-      iconAnchor: [7.5, 7.5]
-    });
-  
-    const marker = L.marker(latlng, { 
-      icon: customIcon,
-      draggable: true 
-    }).addTo(this.map);
-  
-    // Add marker to the tracking array
-    this.markers.push(marker);
-  
-    // Add drag event to update heatmap
-    marker.on('drag', (e) => {
-        // Find the point in rssiPoints that corresponds to this marker
-        const pointIndex = this.markers.indexOf(marker);
-        if (pointIndex !== -1) {
-          // Update the point's latitude and longitude
-          this.rssiPoints[pointIndex][0] = e.target.getLatLng().lat;
-          this.rssiPoints[pointIndex][1] = e.target.getLatLng().lng;
-          
-          // Refresh the heatmap
-          this.updateHeatmap(radius);
-        }
-      });
-  
-    // Popup with RSSI details
-    marker.bindPopup(`
-      <div>
-        <strong>RSSI Value:</strong> ${rssiValue} dBm<br>
-        <strong>Beacon Type:</strong> ${BEACON_CONFIG.beacons[beaconType].name}<br>
-        <strong>Radius:</strong> ${radius} meters<br>
-        <div style="
-          width: 100%; 
-          height: 20px; 
-          background-color: ${color};
-          margin-top: 5px;
-        "></div>
-        <div style="font-size: 0.8em; margin-top: 5px;">
-          <strong>Debug Info:</strong><br>
-          Compensated RSSI: ${debug.compensatedRSSI} dBm<br>
-          Measurement Distance: ${debug.measurementDistance} m<br>
-          Max Distance: ${debug.maxDistance} m
-        </div>
-      </div>
-    `);
-  
-    // Allow updating RSSI value and beacon type
-    marker.on('popupopen', () => {
-      const popupContent = marker.getPopup().getElement();
-      const updateButton = document.createElement('button');
-      updateButton.textContent = 'Update RSSI/Beacon';
-      updateButton.onclick = () => this.showRSSIUpdateForm(marker, rssiValue, beaconType);
-      if (!marker.updateButtonAdded) {
-      popupContent.appendChild(updateButton);
-      marker.updateButtonAdded = true;
-    }
+        className: 'rssi-marker',
+        html: `
+            <div style="
+                width: 15px; 
+                height: 15px; 
+                border-radius: 50%; 
+                background-color: ${color};
+                border: 2px solid white;
+                box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            "></div>
+        `,
+        iconSize: [15, 15],
+        iconAnchor: [7.5, 7.5]
     });
 
-  
+    const marker = L.marker(latlng, { 
+        icon: customIcon,
+        draggable: true 
+    }).addTo(this.map);
+
+    // Add marker to the tracking array
+    this.markers.push(marker);
+
+    // Add drag event to update heatmap
+    marker.on('drag', (e) => {
+        const pointIndex = this.markers.indexOf(marker);
+        if (pointIndex !== -1) {
+            this.rssiPoints[pointIndex][0] = e.target.getLatLng().lat;
+            this.rssiPoints[pointIndex][1] = e.target.getLatLng().lng;
+
+            // Refresh the heatmap
+            this.updateHeatmap();
+        }
+    });
+
+    // Popup with RSSI details and delete option
+    marker.bindPopup(() => {
+        const markerId = marker._leaflet_id; // Use unique Leaflet marker ID
+        return `
+            <div>
+                <strong>RSSI Value:</strong> ${rssiValue} dBm<br>
+                <strong>Beacon Type:</strong> ${BEACON_CONFIG.beacons[beaconType].name}<br>
+                <strong>Radius:</strong> ${radius} meters<br>
+                <div style="
+                    width: 100%; 
+                    height: 20px; 
+                    background-color: ${color};
+                    margin-top: 5px;
+                "></div>
+                <div style="font-size: 0.8em; margin-top: 5px;">
+                    <strong>Debug Info:</strong><br>
+                    Compensated RSSI: ${debug.compensatedRSSI} dBm<br>
+                    Measurement Distance: ${debug.measurementDistance} m<br>
+                    Max Distance: ${debug.maxDistance} m
+                </div>
+                <button id="delete-point-${markerId}" 
+                        style="
+                            margin-top: 10px; 
+                            background-color: red; 
+                            color: white; 
+                            border: none; 
+                            padding: 5px 10px;
+                            cursor: pointer;">
+                    Delete Point
+                </button>
+            </div>
+        `;
+    });
+
+    // Listen for the popupopen event to attach the delete functionality
+    marker.on('popupopen', () => {
+        const markerId = marker._leaflet_id; // Use unique Leaflet marker ID
+        const deleteButton = document.getElementById(`delete-point-${markerId}`);
+        if (deleteButton) {
+            deleteButton.addEventListener('click', () => {
+                this.deleteRSSIPoint(marker);
+            });
+        }
+    });
+
     return marker;
+}
+
+
+deleteRSSIPoint(marker) {
+  // Find the index of the marker
+  const index = this.markers.indexOf(marker);
+
+  if (index !== -1) {
+      // Remove the marker from the map
+      this.map.removeLayer(marker);
+
+      // Remove the marker and RSSI point from their respective arrays
+      this.markers.splice(index, 1);
+      this.rssiPoints.splice(index, 1);
+
+      // Update the heatmap
+      this.updateHeatmap();
+  } else {
+      console.error("Failed to find the marker for deletion.");
   }
+}
+
 
 
   getRadiusInPixels(meters) {
@@ -284,22 +314,21 @@ class RSSIHeatmapManager {
         return;
     }
 
-    // Calculate the radius from the first point (assuming it's the point of interest for radius)
-    const rssiValue = parseFloat(this.markers[0].getPopup().getContent().match(/-?\d+/)[0]);
-    const { radius } = calculateHeatmapRadius(rssiValue, this.beaconType);
+    // Filter out points with radius or intensity of 0
+    const validPoints = this.rssiPoints.filter(point => point[2] > 0);
 
-    // Set the specific radius for -89 RSSI value
-    const customRadius = (rssiValue >= -89) ?  this.heatmapRadius : radius; // For RSSI >= -89, set radius 
+    // If no valid points remain, skip heatmap creation
+    if (validPoints.length === 0) {
+        console.log('No valid RSSI points to display on the heatmap.');
+        return;
+    }
 
-    // Convert the radius to pixels
-    const radiusInPixels = this.getRadiusInPixels(customRadius);
-
-    // Create the heatmap layer with the new radius and intensity drop-off
-    this.heatmapLayer = L.heatLayer(this.rssiPoints, {
-        radius: radiusInPixels,
-        blur: 30,
-        maxZoom: 1,
-        minOpacity: 0.1, 
+    // Create the heatmap layer with filtered points
+    this.heatmapLayer = L.heatLayer(validPoints, {
+        radius: this.getRadiusInPixels(this.heatmapRadius),
+        blur: 20,
+        maxZoom: 16,
+        minOpacity: 0.0, // Fully transparent for intensity 0
         gradient: {
             0.1: 'red',
             0.4: 'orange',
@@ -309,113 +338,6 @@ class RSSIHeatmapManager {
     }).addTo(this.map);
 }
 
-
-  // Show form to update RSSI value and beacon type
-  showRSSIUpdateForm(marker, currentRSSI, currentBeaconType) {
-    const popup = marker.getPopup();
-    const popupContent = popup.getElement();
-    
-    // Create beacon type options
-    const beaconTypeOptions = Object.keys(BEACON_CONFIG.beacons)
-      .map(key => `<option value="${key}" ${key === currentBeaconType ? 'selected' : ''}>${BEACON_CONFIG.beacons[key].name}</option>`)
-      .join('');
-    
-    // Clear existing content
-    popupContent.innerHTML = `
-      <form id="rssiUpdateForm">
-        <div>
-          <label for="rssiInput">RSSI Value (dBm):</label>
-          <input 
-            type="number" 
-            id="rssiInput" 
-            min="-90" 
-            max="-10" 
-            value="${currentRSSI}"
-          >
-        </div>
-        <div>
-          <label for="beaconTypeSelect">Beacon Type:</label>
-          <select id="beaconTypeSelect">
-            ${beaconTypeOptions}
-          </select>
-        </div>
-        <button type="submit">Save</button>
-      </form>
-    `;
-  
-    const form = popupContent.querySelector('#rssiUpdateForm');
-    form.onsubmit = (e) => {
-      e.preventDefault();
-      const newRSSI = parseFloat(form.querySelector('#rssiInput').value);
-      const newBeaconType = form.querySelector('#beaconTypeSelect').value;
-      
-      // Find the corresponding point
-      const index = this.markers.indexOf(marker);
-      
-      if (index !== -1) {
-        // Regenerate points with new RSSI and beacon type
-        const { radius } = calculateHeatmapRadius(newRSSI, newBeaconType);
-        const newPoints = this.generateFixedRadiusPoints(
-          marker.getLatLng(), 
-          radius, 
-          newRSSI
-        );
-        
-        // Replace old points
-        this.rssiPoints.splice(index * 20, 20, ...newPoints);
-        
-        // Update marker icon and popup
-        const newColor = this.getRSSIColor(newRSSI);
-        const newIcon = L.divIcon({
-          className: 'rssi-marker',
-          html: `
-            <div style="
-              width: 20px; 
-              height: 20px; 
-              border-radius: 50%; 
-              background-color: ${newColor};
-              border: 2px solid white;
-              box-shadow: 0 0 5px rgba(0,0,0,0.5);
-            "></div>
-          `,
-          iconSize: [20, 20],
-          iconAnchor: [10, 10]
-        });
-        marker.setIcon(newIcon);
-        
-        // Refresh heatmap
-        this.updateHeatmap(radius);
-        
-        // Update popup content
-        marker.getPopup().setContent(this.createPopupContent(newRSSI, newBeaconType));
-      }
-    };
-  }
-
-  // Helper method to create popup content
-  createPopupContent(rssiValue, beaconType) {
-    const { radius, debug } = calculateHeatmapRadius(rssiValue, beaconType);
-    const color = this.getRSSIColor(rssiValue);
-
-    return `
-      <div>
-        <strong>RSSI Value:</strong> ${rssiValue} dBm<br>
-        <strong>Beacon Type:</strong> ${BEACON_CONFIG.beacons[beaconType].name}<br>
-        <strong>Radius:</strong> ${radius} meters<br>
-        <div style="
-          width: 100%; 
-          height: 20px; 
-          background-color: ${color};
-          margin-top: 5px;
-        "></div>
-        <div style="font-size: 0.8em; margin-top: 5px;">
-          <strong>Debug Info:</strong><br>
-          Compensated RSSI: ${debug.compensatedRSSI} dBm<br>
-          Measurement Distance: ${debug.measurementDistance} m
-        </div>
-      </div>
-    `;
-  }
 
   // Set beacon type
   setBeaconType(beaconType) {
@@ -437,7 +359,6 @@ class RSSIHeatmapManager {
 
   // Import RSSI points
   importRSSIPoints(points) {
-    this.clearRSSIPoints();
     points.forEach(point => {
       this.addRSSIPoint(
         { lat: point.lat, lng: point.lng }, 
