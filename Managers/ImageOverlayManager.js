@@ -139,7 +139,7 @@ class ImageOverlayManager {
     const fileInput = document.createElement("input");
     fileInput.type = "file";
     fileInput.accept = "image/*";
-    fileInput.multiple = true; // Allow multiple file selection
+    fileInput.multiple = true;
     fileInput.style.display = "none";
     document.body.appendChild(fileInput);
 
@@ -204,76 +204,88 @@ class ImageOverlayManager {
   }
 
   handleFileUpload(file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        // Calculate initial positioning
-        const center = this.map.getCenter();
-        const scale = this.config.image.initialScale;
-        const aspectRatio = img.width / img.height;
+    try {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          // Calculate initial positioning
+          const center = this.map.getCenter();
+          const scale = this.config.image.initialScale;
+          const aspectRatio = img.width / img.height;
 
-        CONFIG.image.currentScale = scale;
-        CONFIG.image.dimensions = { width: img.width, height: img.height };
+          CONFIG.image.currentScale = scale;
+          CONFIG.image.dimensions = { width: img.width, height: img.height };
 
-        // Calculate offsets
-        const latOffset = scale / 111.19275649904434;
-        const lngOffset =
-          (scale * aspectRatio) /
-          (111.19275649904434 * Math.cos((center.lat * Math.PI) / 180));
+          // Calculate offsets
+          const latOffset = scale / 111.19275649904434;
+          const lngOffset =
+            (scale * aspectRatio) /
+            (111.19275649904434 * Math.cos((center.lat * Math.PI) / 180));
 
-        // Define three points for the image
-        const topLeft = L.latLng(
-          center.lat + latOffset / 2,
-          center.lng - lngOffset / 2
-        );
-        const topRight = L.latLng(
-          center.lat + latOffset / 2,
-          center.lng + lngOffset / 2
-        );
-        const bottomLeft = L.latLng(
-          center.lat - latOffset / 2,
-          center.lng - lngOffset / 2
-        );
+          // Define three points for the image
+          const topLeft = L.latLng(
+            center.lat + latOffset / 2,
+            center.lng - lngOffset / 2
+          );
+          const topRight = L.latLng(
+            center.lat + latOffset / 2,
+            center.lng + lngOffset / 2
+          );
+          const bottomLeft = L.latLng(
+            center.lat - latOffset / 2,
+            center.lng - lngOffset / 2
+          );
 
-        // Create image overlay
-        const imageOverlay = {
-          overlay: L.imageOverlay
-            .rotated(e.target.result, topLeft, topRight, bottomLeft, {
-              opacity: CONFIG.image.currentOpacity,
-            })
-            .addTo(this.map),
-          file: file,
-          points: {
-            topLeft: topLeft,
-            topRight: topRight,
-            bottomLeft: bottomLeft,
-          },
-          center: center,
-          rotationAngle: 0,
-          opacity: CONFIG.image.currentOpacity,
-          scale: CONFIG.image.initialScale,
-          dimensions: { width: img.width, height: img.height },
-          isSelected: false,
+          // Create image overlay
+          const imageOverlay = {
+            overlay: L.imageOverlay
+              .rotated(e.target.result, topLeft, topRight, bottomLeft, {
+                opacity: CONFIG.image.currentOpacity,
+              })
+              .addTo(this.map),
+            file: file,
+            points: {
+              topLeft: topLeft,
+              topRight: topRight,
+              bottomLeft: bottomLeft,
+            },
+            center: center,
+            rotationAngle: 0,
+            opacity: CONFIG.image.currentOpacity,
+            scale: CONFIG.image.initialScale,
+            dimensions: { width: img.width, height: img.height },
+            isSelected: false,
+          };
+
+          // Add unique identifier
+          imageOverlay.overlay.options.id = `image_${this.imageOverlays.length}`;
+
+          // Add to image overlays array
+          this.imageOverlays.push(imageOverlay);
+
+          // Attach event handlers for this specific overlay
+          this.attachOverlayHandlers(imageOverlay);
+
+          this.rotationAngle = 0;
+
+          // Select the newly added image
+          this.selectImage(this.imageOverlays.length - 1);
         };
-
-        // Add unique identifier
-        imageOverlay.overlay.options.id = `image_${this.imageOverlays.length}`;
-
-        // Add to image overlays array
-        this.imageOverlays.push(imageOverlay);
-
-        // Attach event handlers for this specific overlay
-        this.attachOverlayHandlers(imageOverlay);
-
-        this.rotationAngle = 0;
-
-        // Select the newly added image
-        this.selectImage(this.imageOverlays.length - 1);
+        img.src = e.target.result;
       };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+      this.notificationManager.show({
+        type: "success",
+        message: `${file.name} uploaded successfully`,
+      })
+    } catch (error) {
+      console.error(error);
+      this.notificationManager.show({
+        type: "error",
+        message: "Failed to upload image. Please try again.",
+      });
+    }
   }
 
   selectImage(index) {
