@@ -183,6 +183,7 @@ class AssetTrackingApp {
 
     // Add new marker
     this.searchMarker = L.marker([lat, lon]).addTo(this.map);
+    setTimeout(() => this.map.removeLayer(this.searchMarker), 5000);
     this.searchMarker.bindPopup(location.display_name).openPopup();
 
     // Fly to location
